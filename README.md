@@ -7,6 +7,10 @@ A full-stack web application for managing vehicle service and repair center oper
 ![Frontend](https://img.shields.io/badge/Frontend-Vanilla%20JS-F7DF1E?logo=javascript&logoColor=black)
 ![PWA](https://img.shields.io/badge/PWA-Ready-5A0FC8?logo=pwa&logoColor=white)
 
+**Live Demo:** [luminaautoparts.com/office](https://luminaautoparts.com/office/)
+
+> Demo Login: `admin@garage.lk` / `admin123` &nbsp;|&nbsp; `tech@garage.lk` / `tech123`
+
 ## Features
 
 ### Authentication & Authorization
