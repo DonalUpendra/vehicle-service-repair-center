@@ -185,6 +185,48 @@ try {
         }
     }
 
+    // Seed common makes and models
+    $commonMakes = [
+        'Toyota' => ['Camry', 'Corolla', 'Hilux', 'Land Cruiser', 'Prado', 'RAV4', 'Yaris', 'Vitz', 'Premio', 'Allion', 'Axio', 'Rush', 'Hiace', 'Fortuner'],
+        'Honda' => ['Civic', 'Accord', 'CR-V', 'Fit', 'Grace', 'Vezel', 'City', 'HR-V', 'Odyssey', 'Stepwgn'],
+        'Suzuki' => ['Alto', 'Swift', 'Wagon R', 'Vitara', 'Jimny', 'Celerio', 'Ertiga', 'Baleno', 'Ciaz', 'S-Presso'],
+        'Nissan' => ['Sunny', 'March', 'X-Trail', 'Patrol', 'Navara', 'Teana', 'Juke', 'Leaf', 'Note', 'Dualis'],
+        'Mitsubishi' => ['Lancer', 'Montero', 'Outlander', 'Pajero', 'Mirage', 'Colt', 'ASX', 'Delica', 'L200'],
+        'BMW' => ['3 Series', '5 Series', '7 Series', 'X1', 'X3', 'X5', 'X7', 'M3', 'M5', 'Z4', 'i4'],
+        'Mercedes-Benz' => ['A-Class', 'C-Class', 'E-Class', 'S-Class', 'GLC', 'GLE', 'GLS', 'G-Wagon', 'CLA', 'EQC'],
+        'Audi' => ['A3', 'A4', 'A6', 'A8', 'Q3', 'Q5', 'Q7', 'Q8', 'e-tron', 'TT'],
+        'Volkswagen' => ['Golf', 'Passat', 'Tiguan', 'Polo', 'Jetta', 'Beetle', 'T-Cross', 'Touareg', 'Arteon'],
+        'Ford' => ['Focus', 'Fiesta', 'Mustang', 'Ranger', 'Everest', 'Escape', 'Explorer', 'Endeavour', 'Figo'],
+        'Hyundai' => ['Elantra', 'Tucson', 'Santa Fe', 'i10', 'i20', 'Creta', 'Grand i10', 'Kona', 'Sonata'],
+        'Kia' => ['Picanto', 'Rio', 'Cerato', 'Seltos', 'Sportage', 'Sorento', 'Carnival', 'Stinger', 'EV6'],
+        'Mazda' => ['3', '6', 'CX-3', 'CX-5', 'CX-9', 'MX-5', 'BT-50', 'Demio', 'Atenza'],
+        'Subaru' => ['Impreza', 'Outback', 'Forester', 'Legacy', 'XV', 'WRX', 'BRZ', 'Levorg'],
+        'Tata' => ['Nano', 'Indica', 'Indigo', 'Sumo', 'Safari', 'Nexon', 'Tiago', 'Harrier', 'Punch'],
+        'Mahindra' => ['Scorpio', 'XUV500', 'Bolero', 'Thar', 'XUV300', 'KUV100', 'Marazzo', 'Alturas G4'],
+        'Land Rover' => ['Range Rover', 'Range Rover Sport', 'Range Rover Evoque', 'Discovery', 'Discovery Sport', 'Defender'],
+        'Jaguar' => ['XE', 'XF', 'XJ', 'F-PACE', 'E-PACE', 'I-PACE', 'F-TYPE'],
+        'Volvo' => ['XC40', 'XC60', 'XC90', 'S60', 'S90', 'V60', 'V90', 'C40'],
+        'Lexus' => ['ES', 'IS', 'LS', 'RX', 'NX', 'UX', 'LX', 'GX'],
+    ];
+
+    $insertMake = $pdo->prepare('INSERT IGNORE INTO vehicle_makes (name) VALUES (?)');
+    $insertModel = $pdo->prepare('INSERT IGNORE INTO vehicle_models (make_id, name) VALUES (?, ?)');
+    $getMake = $pdo->prepare('SELECT id FROM vehicle_makes WHERE name = ?');
+
+    $makeCount = 0;
+    $modelCount = 0;
+    foreach ($commonMakes as $makeName => $models) {
+        $insertMake->execute([$makeName]);
+        if ($insertMake->rowCount() > 0) $makeCount++;
+        $getMake->execute([$makeName]);
+        $makeId = (int)$getMake->fetchColumn();
+        foreach ($models as $modelName) {
+            $insertModel->execute([$makeId, $modelName]);
+            if ($insertModel->rowCount() > 0) $modelCount++;
+        }
+    }
+    echo "[OK] Seeded $makeCount makes and $modelCount models\n";
+
     echo "\n=== Migration Complete ===\n";
 
 } catch (PDOException $e) {
