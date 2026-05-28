@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#3b82f6">
+    <link rel="manifest" href="manifest.json">
+    <title>Lumina AutoWorks</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- ==================== LOGIN SCREEN ==================== -->
+    <div class="login-container" id="loginScreen">
+        <div class="login-card">
+            <div class="logo-wrapper">
+                <i class="fa-solid fa-wrench"></i>
+            </div>
+            <h2>Lumina AutoWorks</h2>
+            <p class="subtitle">Management System</p>
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-envelope input-icon"></i>
+                        <input type="email" id="loginEmail" placeholder="Enter your email" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <div class="input-wrapper">
+                        <i class="fa-solid fa-lock input-icon"></i>
+                        <input type="password" id="loginPassword" placeholder="Enter your password" required>
+                    </div>
+                </div>
+                <p class="error-msg" id="loginError"><i class="fa-solid fa-circle-exclamation"></i> Invalid credentials. Please try again.</p>
+                <button type="submit" class="btn btn-primary" style="margin-top:12px;">
+                    <i class="fa-solid fa-right-to-bracket"></i> Sign In
+                </button>
+            </form>
+            <div class="demo-info">
+                <strong><i class="fa-solid fa-key"></i> Demo Credentials:</strong><br>
+                <strong>admin@garage.lk</strong> / admin123 &nbsp;|&nbsp;
+                <strong>tech@garage.lk</strong> / tech123
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== PUBLIC QUOTE PAGE ==================== -->
+    <div class="public-quote-container" id="publicQuotePage">
+        <div class="quote-card" id="quoteCardContent"></div>
+    </div>
+
+    <!-- ==================== MAIN APP LAYOUT ==================== -->
+    <div class="app-layout" id="appLayout">
+        <!-- Mobile Toggle -->
+        <button class="mobile-toggle" id="mobileToggle" onclick="toggleSidebar()">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+
+        <!-- Sidebar Backdrop (mobile) -->
+        <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="s-icon"><i class="fa-solid fa-wrench"></i></div>
+                <div>
+                    <h3>VSR Center</h3>
+                    <span class="s-sub">Management System</span>
+                </div>
+            </div>
+            <nav class="sidebar-nav" id="sidebarNav"></nav>
+            <div class="sidebar-footer">
+                <div class="notification-bell" id="notificationBell" onclick="toggleNotifications()" title="Notifications">
+                    <i class="fa-solid fa-bell"></i>
+                    <span class="notification-badge" id="notificationBadge" style="display:none;">0</span>
+                </div>
+                <div class="user-avatar" id="sidebarAvatar">A</div>
+                <div class="user-info">
+                    <strong id="sidebarName">Admin</strong>
+                    <span id="sidebarRole">Administrator</span>
+                </div>
+                <button class="logout-btn" title="Logout" onclick="handleLogout()">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content" id="mainContent">
+            <!-- Page: Dashboard -->
+            <div class="page-content active" id="page-dashboard">
+                <div class="page-header">
+                    <h1><i class="fa-solid fa-chart-pie"></i> Dashboard</h1>
+                    <span class="breadcrumb"><i class="fa-solid fa-house"></i> Home / Overview</span>
+                </div>
+                <div class="cards-row" id="dashboardCards">
+                    <div class="loading-state"><span class="spinner spinner-lg"></span><p style="margin-top:12px;">Loading dashboard...</p></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><h3><i class="fa-solid fa-clock-rotate-left"></i> Recent Check-Ins</h3></div>
+                    <div class="panel-body" id="recentCheckinsTable">
+                        <div class="loading-state"><span class="spinner"></span><p>Loading visits...</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page: Vehicle Intake -->
+            <div class="page-content" id="page-vehicle-intake">
+                <div class="page-header">
+                    <h1><i class="fa-solid fa-car-side"></i> Vehicle Check-In</h1>
+                    <span class="breadcrumb"><i class="fa-solid fa-house"></i> Home / Vehicle Intake</span>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><h3><i class="fa-solid fa-clipboard-check"></i> Check-In Details</h3></div>
+                    <div class="panel-body">
+                        <form id="vehicleIntakeForm" onsubmit="handleVehicleIntake(event)">
+                            <div class="form-row">
+                                <div class="form-group" style="position:relative;">
+                                    <label>Registration Number *</label>
+                                    <input type="text" id="vRegNumber" placeholder="Type to search existing or enter new..." required style="text-transform:uppercase;" autocomplete="off" oninput="onRegNumberInput()" onblur="onRegNumberBlur()" onfocus="onRegNumberFocus()">
+                                    <div id="vRegSuggestions" class="autocomplete-suggestions"></div>
+                                </div>
+                                <div class="form-group"><label>Make / Brand</label><input type="text" id="vMake" placeholder="e.g., Toyota"></div>
+                                <div class="form-group"><label>Model</label><input type="text" id="vModel" placeholder="e.g., Corolla"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Owner Name *</label><input type="text" id="vOwnerName" placeholder="Customer full name" required></div>
+                                <div class="form-group"><label>Email *</label><input type="email" id="vOwnerEmail" placeholder="customer@email.com" required></div>
+                                <div class="form-group"><label>Phone</label><input type="tel" id="vOwnerPhone" placeholder="07xxxxxxxx"></div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group"><label>Odometer Reading</label><input type="number" id="vOdometer" placeholder="e.g., 55000"></div>
+                                <div class="form-group"><label>Reported Issues (this visit)</label><textarea id="vIssues" placeholder="Describe issues reported by the customer..."></textarea></div>
+                            </div>
+                            <button type="submit" class="btn btn-accent"><i class="fa-solid fa-circle-check"></i> Check-In Vehicle</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="panel" id="vehicleHistoryPanel" style="display:none;">
+                    <div class="panel-header"><h3><i class="fa-solid fa-clock-rotate-left"></i> Vehicle History</h3></div>
+                    <div class="panel-body" id="vehicleHistory"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><h3><i class="fa-solid fa-list-ul"></i> All Vehicles</h3></div>
+                    <div class="panel-body" id="allVehiclesTable">
+                        <div class="loading-state"><span class="spinner"></span><p>Loading vehicles...</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page: Product Catalog -->
+            <div class="page-content" id="page-products">
+                <div class="page-header">
+                    <h1><i class="fa-solid fa-boxes-stacked"></i> Product / Service Catalog</h1>
+                    <span class="breadcrumb"><i class="fa-solid fa-house"></i> Home / Products</span>
+                </div>
+                 <div class="panel">
+                 <div class="panel-header">
+                     <h3><i class="fa-solid fa-tags"></i> Manage Products & Services</h3>
+                     <div class="search-bar">
+                         <div class="form-group"><label>Search Products</label><input type="text" id="productSearch" placeholder="Search products..."></div>
+                     </div>
+                     <button class="btn btn-accent btn-sm" onclick="openProductModal()"><i class="fa-solid fa-plus"></i> Add Product</button>
+                 </div>
+                     <div class="panel-body" id="productsTable">
+                         <div class="loading-state"><span class="spinner"></span><p>Loading products...</p></div>
+                     </div>
+                 </div>
+            </div>
+
+            <!-- Page: Technician Management (Admin only) -->
+            <div class="page-content" id="page-technicians">
+                <div class="page-header">
+                    <h1><i class="fa-solid fa-users-gear"></i> Technicians</h1>
+                    <span class="breadcrumb"><i class="fa-solid fa-house"></i> Home / Technicians</span>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">
+                        <h3><i class="fa-solid fa-user-check"></i> All Technicians</h3>
+                        <button class="btn btn-accent btn-sm" onclick="openTechnicianModal()"><i class="fa-solid fa-plus"></i> Add Technician</button>
+                    </div>
+                    <div class="panel-body" id="techniciansTable">
+                        <div class="loading-state"><span class="spinner"></span><p>Loading...</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page: Search & Create Bill -->
+            <div class="page-content" id="page-search-bill">
+                <div class="page-header">
+                    <h1><i class="fa-solid fa-file-invoice"></i> Search & Create Bill</h1>
+                    <span class="breadcrumb"><i class="fa-solid fa-house"></i> Home / Billing</span>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><h3><i class="fa-solid fa-magnifying-glass"></i> Search Vehicle</h3></div>
+                    <div class="panel-body">
+                        <div class="search-bar">
+                            <div class="form-group"><label>Registration Number or Owner Name</label><input type="text" id="searchVehicleInput" placeholder="Search by reg number or owner name..."></div>
+                            <button class="btn btn-primary" onclick="searchVehicles()"><i class="fa-solid fa-search"></i> Search</button>
+                        </div>
+                        <div id="searchResults" style="margin-top:20px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page: Reports -->
+            <div class="page-content" id="page-reports">
+                <div class="page-header">
+                    <h1><i class="fa-solid fa-chart-line"></i> Reports</h1>
+                    <span class="breadcrumb"><i class="fa-solid fa-house"></i> Home / Reports</span>
+                </div>
+                <div class="cards-row" id="reportCards">
+                    <div class="loading-state"><span class="spinner spinner-lg"></span><p>Loading reports...</p></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><h3><i class="fa-solid fa-file-lines"></i> All Bills / Visits</h3></div>
+                    <div class="panel-body" id="allBillsTable">
+                        <div class="loading-state"><span class="spinner"></span><p>Loading bills...</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page: Customers -->
+            <div class="page-content" id="page-customers">
+                <div class="page-header">
+                    <h1><i class="fa-solid fa-address-book"></i> Customers</h1>
+                    <span class="breadcrumb"><i class="fa-solid fa-house"></i> Home / Customers</span>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><h3><i class="fa-solid fa-users"></i> All Customers</h3></div>
+                    <div class="panel-body" id="customersTable">
+                        <div class="loading-state"><span class="spinner"></span><p>Loading customers...</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page: Job Management -->
+            <div class="page-content" id="page-jobs">
+                <div class="page-header">
+                    <h1><i class="fa-solid fa-briefcase"></i> Job Management</h1>
+                    <span class="breadcrumb"><i class="fa-solid fa-house"></i> Home / Jobs</span>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><h3><i class="fa-solid fa-list-check"></i> Active & Completed Jobs</h3></div>
+                    <div class="panel-body" id="jobsTable">
+                        <div class="loading-state"><span class="spinner"></span><p>Loading jobs...</p></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page: Salaries (Admin only) -->
+            <div class="page-content" id="page-salaries">
+                <div class="page-header">
+                    <h1><i class="fa-solid fa-sack-dollar"></i> Technician Salaries</h1>
+                    <span class="breadcrumb"><i class="fa-solid fa-house"></i> Home / Salaries</span>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><h3><i class="fa-solid fa-wallet"></i> Pay Technician</h3></div>
+                    <div class="panel-body">
+                        <form id="salaryForm" onsubmit="handleSalaryPayment(event)">
+                            <div class="form-row">
+                                <div class="form-group"><label>Technician *</label><select id="salaryTechnician" required><option value="">-- Select --</option></select></div>
+                                <div class="form-group"><label>Amount (LKR) *</label><input type="number" id="salaryAmount" step="0.01" required></div>
+                                <div class="form-group"><label>Payment Date</label><input type="date" id="salaryDate"></div>
+                            </div>
+                            <div class="form-group"><label>Notes</label><textarea id="salaryNotes" placeholder="Optional notes about this payment..." rows="2"></textarea></div>
+                            <button type="submit" class="btn btn-accent"><i class="fa-solid fa-paper-plane"></i> Record Payment</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><h3><i class="fa-solid fa-list"></i> Payment History</h3></div>
+                    <div class="panel-body" id="salaryTable"><div class="loading-state"><span class="spinner"></span><p>Loading payments...</p></div></div>
+                </div>
+            </div>
+
+            <!-- Page: Settings (Admin only) -->
+            <div class="page-content" id="page-settings">
+                <div class="page-header">
+                    <h1><i class="fa-solid fa-gear"></i> System Settings</h1>
+                    <span class="breadcrumb"><i class="fa-solid fa-house"></i> Home / Settings</span>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><h3><i class="fa-solid fa-envelope-circle-check"></i> SMTP Configuration</h3></div>
+                    <div class="panel-body">
+                        <div class="form-row">
+                            <div class="form-group"><label>SMTP Host</label><input type="text" id="setSmtpHost" placeholder="smtp.example.com"></div>
+                            <div class="form-group"><label>SMTP Port</label><input type="number" id="setSmtpPort" placeholder="465"></div>
+                            <div class="form-group"><label>Encryption</label><select id="setSmtpEncryption"><option value="ssl">SSL</option><option value="tls">TLS</option><option value="none">None</option></select></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>SMTP Username</label><input type="text" id="setSmtpUsername" placeholder="user@domain.com"></div>
+                            <div class="form-group"><label>SMTP Password</label><input type="password" id="setSmtpPassword" placeholder="SMTP password"></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group"><label>From Email</label><input type="email" id="setFromEmail" placeholder="info@yourshop.com"></div>
+                            <div class="form-group"><label>From Name</label><input type="text" id="setFromName" placeholder="Your Shop Name"></div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Enable Email Sending</label>
+                                <select id="setEmailEnabled"><option value="1">Enabled</option><option value="0">Disabled</option></select>
+                            </div>
+                            <div class="form-group" style="align-self:flex-end;">
+                                <button class="btn btn-outline btn-sm" onclick="testEmailConfig()"><i class="fa-solid fa-paper-plane"></i> Send Test Email</button>
+                            </div>
+                        </div>
+                        <button class="btn btn-accent" onclick="saveSettings()" style="margin-top:12px;"><i class="fa-solid fa-floppy-disk"></i> Save Settings</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ==================== MODALS ==================== -->
+    <!-- Product Modal -->
+    <div class="modal-overlay" id="productModalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="productModalTitle"><i class="fa-solid fa-box"></i> Add Product</h3>
+                <button class="modal-close" onclick="closeProductModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="productForm" onsubmit="saveProduct(event)">
+                    <input type="hidden" id="prodEditId">
+                    <div class="form-group"><label>Product/Service Name *</label><input type="text" id="prodName" required></div>
+                    <div class="form-group"><label>Sell Price (LKR) *</label><input type="number" id="prodPrice" step="0.01" required></div>
+                    <div class="form-group"><label>Buy/Cost Price (LKR)</label><input type="number" id="prodBuyPrice" step="0.01" placeholder="0.00"></div>
+                    <div class="form-group"><label>Description</label><textarea id="prodDesc" placeholder="Brief description of the product or service..."></textarea></div>
+                    <div class="modal-footer" style="border:none;padding:0;margin-top:16px;">
+                        <button type="button" class="btn btn-outline btn-sm" onclick="closeProductModal()">Cancel</button>
+                        <button type="submit" class="btn btn-accent btn-sm"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Technician Modal -->
+    <div class="modal-overlay" id="technicianModalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="techModalTitle"><i class="fa-solid fa-user-plus"></i> Add Technician</h3>
+                <button class="modal-close" onclick="closeTechnicianModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="technicianForm" onsubmit="saveTechnician(event)">
+                    <input type="hidden" id="techEditId">
+                    <div class="form-group"><label>Name *</label><input type="text" id="techName" placeholder="Full name" required></div>
+                    <div class="form-group"><label>Email *</label><input type="email" id="techEmail" placeholder="email@example.com" required></div>
+                    <div class="form-group"><label>Password *</label><input type="password" id="techPassword" placeholder="Minimum 4 characters" required minlength="4"></div>
+                    <div class="form-group"><label>Commission (%)</label><input type="number" id="techCommission" step="0.01" placeholder="e.g., 10 for 10%"></div>
+                    <div class="modal-footer" style="border:none;padding:0;margin-top:16px;">
+                        <button type="button" class="btn btn-outline btn-sm" onclick="closeTechnicianModal()">Cancel</button>
+                        <button type="submit" class="btn btn-accent btn-sm"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bill Creation Modal -->
+    <div class="modal-overlay" id="billModalOverlay">
+        <div class="modal" style="max-width:700px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-file-invoice"></i> Create Quotation / Bill</h3>
+                <button class="modal-close" onclick="closeBillModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" id="billModalBody"></div>
+        </div>
+    </div>
+
+    <!-- View Bill Modal -->
+    <div class="modal-overlay" id="viewBillModalOverlay">
+        <div class="modal" style="max-width:750px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-file-invoice"></i> Bill Details</h3>
+                <button class="modal-close" onclick="closeViewBillModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" id="viewBillModalBody"></div>
+        </div>
+    </div>
+
+    <!-- Send Email Modal -->
+    <div class="modal-overlay" id="emailModalOverlay">
+        <div class="modal" style="max-width:600px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-envelope"></i> Send Email to <span id="emailCustomerName"></span></h3>
+                <button class="modal-close" onclick="closeModal('emailModalOverlay')"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>To</label>
+                    <input type="email" id="emailTo" readonly style="background:#f1f5f9;">
+                </div>
+                <div class="form-group">
+                    <label>Subject *</label>
+                    <input type="text" id="emailSubject" required>
+                </div>
+                <div class="form-group">
+                    <label>Message Body *</label>
+                    <textarea id="emailBody" rows="10" style="font-family:system-ui,sans-serif;line-height:1.7;" required></textarea>
+                </div>
+                <div class="modal-footer" style="border:none;padding:0;margin-top:16px;">
+                    <button type="button" class="btn btn-outline btn-sm" onclick="closeModal('emailModalOverlay')">Cancel</button>
+                    <button type="button" class="btn btn-accent btn-sm" id="emailSendBtn"><i class="fa-solid fa-paper-plane"></i> Send Email</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Panel -->
+    <div class="notification-panel" id="notificationPanel">
+        <div class="notification-panel-header">
+            <h4><i class="fa-solid fa-bell"></i> Notifications</h4>
+            <button class="btn btn-sm btn-outline" onclick="markAllNotificationsRead()" style="font-size:0.75rem;">Mark all read</button>
+        </div>
+        <div class="notification-panel-body" id="notificationList">
+            <div class="loading-state"><span class="spinner"></span><p>Loading...</p></div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
+
+    <!-- ==================== SCRIPTS ==================== -->
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/vehicle.js"></script>
+    <script src="js/products.js?v=2"></script>
+    <script src="js/technicians.js"></script>
+    <script src="js/billing.js"></script>
+    <script src="js/reports.js"></script>
+    <script src="js/quote-public.js"></script>
+    <script src="js/customers.js"></script>
+    <script src="js/job-management.js"></script>
+    <script src="js/salary.js"></script>
+    <script src="js/admin-settings.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js');
+      }
+    </script>
+</body>
+</html>
