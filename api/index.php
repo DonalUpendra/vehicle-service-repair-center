@@ -14,6 +14,8 @@ require_once __DIR__ . '/controllers/CustomerController.php';
 require_once __DIR__ . '/controllers/SettingsController.php';
 require_once __DIR__ . '/controllers/NotificationController.php';
 require_once __DIR__ . '/controllers/SalaryController.php';
+require_once __DIR__ . '/controllers/MakesController.php';
+require_once __DIR__ . '/controllers/ModelsController.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -191,6 +193,40 @@ if ($resource === 'reports') {
 if ($resource === 'jobs') {
     if ($method === 'GET' && !$id) {
         BillController::jobsList();
+    }
+    jsonError('Not found', 404);
+}
+
+// Vehicle Makes
+if ($resource === 'makes') {
+    if ($method === 'GET' && !$id) {
+        MakesController::index();
+    }
+    if ($method === 'POST' && !$id) {
+        MakesController::store();
+    }
+    if ($id && $method === 'PUT') {
+        MakesController::update($id);
+    }
+    if ($id && $method === 'DELETE') {
+        MakesController::destroy($id);
+    }
+    jsonError('Not found', 404);
+}
+
+// Vehicle Models
+if ($resource === 'models') {
+    if ($method === 'GET' && !$id) {
+        ModelsController::index();
+    }
+    if ($method === 'POST' && !$id) {
+        ModelsController::store();
+    }
+    if ($id && $method === 'PUT') {
+        ModelsController::update($id);
+    }
+    if ($id && $method === 'DELETE') {
+        ModelsController::destroy($id);
     }
     jsonError('Not found', 404);
 }

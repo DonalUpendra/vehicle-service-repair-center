@@ -126,8 +126,8 @@
                                     <input type="text" id="vRegNumber" placeholder="Type to search existing or enter new..." required style="text-transform:uppercase;" autocomplete="off" oninput="onRegNumberInput()" onblur="onRegNumberBlur()" onfocus="onRegNumberFocus()">
                                     <div id="vRegSuggestions" class="autocomplete-suggestions"></div>
                                 </div>
-                                <div class="form-group"><label>Make / Brand</label><input type="text" id="vMake" placeholder="e.g., Toyota"></div>
-                                <div class="form-group"><label>Model</label><input type="text" id="vModel" placeholder="e.g., Corolla"></div>
+                                <div class="form-group"><label>Make / Brand</label><select id="vMake" onchange="onMakeChange()"><option value="">-- Select Make --</option></select></div>
+                                <div class="form-group"><label>Model</label><input type="text" id="vModel" list="modelSuggestions" placeholder="Type to search or select..." autocomplete="off"><datalist id="modelSuggestions"></datalist></div>
                             </div>
                             <div class="form-row">
                                 <div class="form-group"><label>Owner Name *</label><input type="text" id="vOwnerName" placeholder="Customer full name" required></div>
@@ -312,6 +312,37 @@
                             </div>
                         </div>
                         <button class="btn btn-accent" onclick="saveSettings()" style="margin-top:12px;"><i class="fa-solid fa-floppy-disk"></i> Save Settings</button>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header"><h3><i class="fa-solid fa-car"></i> Vehicle Makes / Brands</h3></div>
+                    <div class="panel-body">
+                        <div class="form-row" style="margin-bottom:12px;">
+                            <div class="form-group" style="flex:1;">
+                                <input type="text" id="newMakeName" placeholder="Enter make name...">
+                            </div>
+                            <div class="form-group" style="align-self:flex-end;">
+                                <button class="btn btn-accent btn-sm" onclick="addMake()"><i class="fa-solid fa-plus"></i> Add Make</button>
+                            </div>
+                        </div>
+                        <div id="makesList"></div>
+
+                        <hr style="margin:20px 0;border-color:var(--border);">
+
+                        <h4 style="margin-bottom:12px;"><i class="fa-solid fa-cubes"></i> Models</h4>
+                        <div class="form-row" style="margin-bottom:12px;">
+                            <div class="form-group" style="flex:1;">
+                                <select id="modelMakeSelect" onchange="onModelMakeChange()"><option value="">-- Select Make --</option></select>
+                            </div>
+                            <div class="form-group" style="flex:1;">
+                                <input type="text" id="newModelName" placeholder="Enter model name...">
+                            </div>
+                            <div class="form-group" style="align-self:flex-end;">
+                                <button class="btn btn-accent btn-sm" onclick="addModel()"><i class="fa-solid fa-plus"></i> Add Model</button>
+                            </div>
+                        </div>
+                        <div id="modelsList"></div>
                     </div>
                 </div>
             </div>

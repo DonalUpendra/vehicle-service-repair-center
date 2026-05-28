@@ -152,6 +152,39 @@ try {
         }
     }
 
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS vehicle_makes (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            name VARCHAR(100) NOT NULL UNIQUE,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB");
+        echo "[OK] Created vehicle_makes table\n";
+    } catch (PDOException $e) {
+        if (strpos($e->getMessage(), 'already exists') !== false) {
+            echo "[OK] vehicle_makes table already exists\n";
+        } else {
+            throw $e;
+        }
+    }
+
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS vehicle_models (
+            id INT PRIMARY KEY AUTO_INCREMENT,
+            make_id INT NOT NULL,
+            name VARCHAR(100) NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (make_id) REFERENCES vehicle_makes(id) ON DELETE CASCADE,
+            UNIQUE KEY unique_model_per_make (make_id, name)
+        ) ENGINE=InnoDB");
+        echo "[OK] Created vehicle_models table\n";
+    } catch (PDOException $e) {
+        if (strpos($e->getMessage(), 'already exists') !== false) {
+            echo "[OK] vehicle_models table already exists\n";
+        } else {
+            throw $e;
+        }
+    }
+
     echo "\n=== Migration Complete ===\n";
 
 } catch (PDOException $e) {

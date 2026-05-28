@@ -3,9 +3,44 @@ let vehicleAutocompleteCache = [];
 let selectedVehicle = null;
 let autocompleteDebounce = null;
 
+async function loadMakesDropdown() {
+    try {
+        const makes = await apiGet('makes');
+        const select = document.getElementById('vMake');
+        select.innerHTML = '<option value="">-- Select Make --</option>';
+        makes.forEach(m => {
+            select.innerHTML += `<option value="${escapeHtml(m.name)}">${escapeHtml(m.name)}</option>`;
+        });
+    } catch (err) {
+        showToast('Failed to load makes', 'error');
+    }
+}
+
+async function onMakeChange() {
+    const makeName = document.getElementById('vMake').value;
+    const datalist = document.getElementById('modelSuggestions');
+    datalist.innerHTML = '';
+    document.getElementById('vModel').value = '';
+    if (!makeName) return;
+    try {
+        const makes = await apiGet('makes');
+        const make = makes.find(m => m.name === makeName);
+        if (!make) return;
+        const models = await apiGet('models?make_id=' + make.id);
+        models.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.name;
+            datalist.appendChild(opt);
+        });
+    } catch (err) {
+        showToast('Failed to load models', 'error');
+    }
+}
+
 async function renderVehicleIntake() {
     showLoading('allVehiclesTable', 'Loading vehicles...');
     clearIntakeForm();
+    await loadMakesDropdown();
 
     try {
         const vehicles = await apiGet('vehicles');
@@ -44,6 +79,7 @@ function clearIntakeForm() {
     document.getElementById('vRegNumber').value = '';
     document.getElementById('vMake').value = '';
     document.getElementById('vModel').value = '';
+    document.getElementById('modelSuggestions').innerHTML = '';
     document.getElementById('vOwnerName').value = '';
     document.getElementById('vOwnerEmail').value = '';
     document.getElementById('vOwnerPhone').value = '';
@@ -62,8 +98,20 @@ function clearIntakeForm() {
 
 function setIntakeForm(vehicle) {
     document.getElementById('vRegNumber').value = vehicle.registration_number || '';
-    document.getElementById('vMake').value = vehicle.make || '';
-    document.getElementById('vModel').value = vehicle.model || '';
+    const makeSelect = document.getElementById('vMake');
+    if (vehicle.make && [...makeSelect.options].some(o => o.value === vehicle.make)) {
+        makeSelect.value = vehicle.make;
+        onMakeChange().then(() => {
+            const modelInput = document.getElementById('vModel');
+            if (vehicle.model) modelInput.value = vehicle.model;
+        });
+    } else {
+        makeSelect.value = '';
+        onMakeChange().then(() => {
+            const modelInput = document.getElementById('vModel');
+            if (vehicle.model) modelInput.value = vehicle.model;
+        });
+    }
     document.getElementById('vOwnerName').value = vehicle.owner_name || '';
     document.getElementById('vOwnerEmail').value = vehicle.owner_email || '';
     document.getElementById('vOwnerPhone').value = vehicle.owner_phone || '';

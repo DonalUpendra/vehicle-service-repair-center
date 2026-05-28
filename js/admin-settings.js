@@ -13,6 +13,8 @@ async function renderSettings() {
         document.getElementById('setFromEmail').value = map['smtp_from_email'] || '';
         document.getElementById('setFromName').value = map['smtp_from_name'] || '';
         document.getElementById('setEmailEnabled').value = map['email_enabled'] || '1';
+
+        renderMakes();
     } catch (err) {
         showToast('Failed to load settings: ' + (err.message || 'Unknown error'), 'error');
     }
@@ -46,6 +48,130 @@ async function saveSettings() {
     }
 }
 
+/* ==================== VEHICLE MAKES / BRANDS ==================== */
+async function renderMakes() {
+    try {
+        const makes = await apiGet('makes');
+        const list = document.getElementById('makesList');
+        if (makes.length === 0) {
+            list.innerHTML = '<p style="color:var(--text-muted);">No makes defined yet.</p>';
+        } else {
+            let html = '<table class="striped"><thead><tr><th>Make / Brand</th><th>Action</th></tr></thead><tbody>';
+            makes.forEach(m => {
+                html += `<tr>
+                    <td>${escapeHtml(m.name)}</td>
+                    <td><button class="btn btn-sm btn-outline-danger" onclick="deleteMake(${m.id})"><i class="fa-solid fa-trash-can"></i> Delete</button></td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+            list.innerHTML = html;
+        }
+
+        const select = document.getElementById('modelMakeSelect');
+        const currentVal = select.value;
+        select.innerHTML = '<option value="">-- Select Make --</option>';
+        makes.forEach(m => {
+            select.innerHTML += `<option value="${m.id}">${escapeHtml(m.name)}</option>`;
+        });
+        if (currentVal) select.value = currentVal;
+    } catch (err) {
+        showToast('Failed to load makes: ' + (err.message || 'Unknown error'), 'error');
+    }
+}
+
+async function addMake() {
+    const input = document.getElementById('newMakeName');
+    const name = input.value.trim();
+    if (!name) {
+        showToast('Please enter a make name', 'error');
+        return;
+    }
+    try {
+        await apiPost('makes', { name });
+        input.value = '';
+        showToast('Make added successfully!', 'success');
+        renderMakes();
+    } catch (err) {
+        showToast('Failed to add make: ' + (err.message || 'Unknown error'), 'error');
+    }
+}
+
+async function deleteMake(id) {
+    if (!confirm('Are you sure you want to delete this make? All associated models will also be deleted.')) return;
+    try {
+        await apiDelete('makes/' + id);
+        showToast('Make deleted successfully!', 'success');
+        renderMakes();
+    } catch (err) {
+        showToast('Failed to delete make: ' + (err.message || 'Unknown error'), 'error');
+    }
+}
+
+function onModelMakeChange() {
+    renderModels();
+}
+
+async function renderModels() {
+    const makeId = document.getElementById('modelMakeSelect').value;
+    const list = document.getElementById('modelsList');
+    if (!makeId) {
+        list.innerHTML = '<p style="color:var(--text-muted);">Select a make above to view its models.</p>';
+        return;
+    }
+    try {
+        const models = await apiGet('models?make_id=' + makeId);
+        if (models.length === 0) {
+            list.innerHTML = '<p style="color:var(--text-muted);">No models defined for this make.</p>';
+        } else {
+            let html = '<table class="striped"><thead><tr><th>Model</th><th>Action</th></tr></thead><tbody>';
+            models.forEach(m => {
+                html += `<tr>
+                    <td>${escapeHtml(m.name)}</td>
+                    <td><button class="btn btn-sm btn-outline-danger" onclick="deleteModel(${m.id})"><i class="fa-solid fa-trash-can"></i> Delete</button></td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+            list.innerHTML = html;
+        }
+    } catch (err) {
+        showToast('Failed to load models: ' + (err.message || 'Unknown error'), 'error');
+    }
+}
+
+async function addModel() {
+    const makeId = document.getElementById('modelMakeSelect').value;
+    const input = document.getElementById('newModelName');
+    const name = input.value.trim();
+    if (!makeId) {
+        showToast('Please select a make first', 'error');
+        return;
+    }
+    if (!name) {
+        showToast('Please enter a model name', 'error');
+        return;
+    }
+    try {
+        await apiPost('models', { make_id: parseInt(makeId), name });
+        input.value = '';
+        showToast('Model added successfully!', 'success');
+        renderModels();
+    } catch (err) {
+        showToast('Failed to add model: ' + (err.message || 'Unknown error'), 'error');
+    }
+}
+
+async function deleteModel(id) {
+    if (!confirm('Are you sure you want to delete this model?')) return;
+    try {
+        await apiDelete('models/' + id);
+        showToast('Model deleted successfully!', 'success');
+        renderModels();
+    } catch (err) {
+        showToast('Failed to delete model: ' + (err.message || 'Unknown error'), 'error');
+    }
+}
+
+/* ==================== TEST EMAIL ==================== */
 async function testEmailConfig() {
     const email = prompt('Enter a test email address to send a test email to:');
     if (!email) return;
