@@ -56,14 +56,14 @@ async function renderMakes() {
         if (makes.length === 0) {
             list.innerHTML = '<p style="color:var(--text-muted);">No makes defined yet.</p>';
         } else {
-            let html = '<table class="striped"><thead><tr><th>Make / Brand</th><th>Action</th></tr></thead><tbody>';
+            let html = '<div class="table-responsive"><table class="striped"><thead><tr><th>Make / Brand</th><th>Action</th></tr></thead><tbody>';
             makes.forEach(m => {
                 html += `<tr>
                     <td>${escapeHtml(m.name)}</td>
                     <td><button class="btn btn-sm btn-outline-danger" onclick="deleteMake(${m.id})"><i class="fa-solid fa-trash-can"></i> Delete</button></td>
                 </tr>`;
             });
-            html += '</tbody></table>';
+            html += '</tbody></table></div>';
             list.innerHTML = html;
         }
 
@@ -123,14 +123,14 @@ async function renderModels() {
         if (models.length === 0) {
             list.innerHTML = '<p style="color:var(--text-muted);">No models defined for this make.</p>';
         } else {
-            let html = '<table class="striped"><thead><tr><th>Model</th><th>Action</th></tr></thead><tbody>';
+            let html = '<div class="table-responsive"><table class="striped"><thead><tr><th>Model</th><th>Action</th></tr></thead><tbody>';
             models.forEach(m => {
                 html += `<tr>
                     <td>${escapeHtml(m.name)}</td>
                     <td><button class="btn btn-sm btn-outline-danger" onclick="deleteModel(${m.id})"><i class="fa-solid fa-trash-can"></i> Delete</button></td>
                 </tr>`;
             });
-            html += '</tbody></table>';
+            html += '</tbody></table></div>';
             list.innerHTML = html;
         }
     } catch (err) {

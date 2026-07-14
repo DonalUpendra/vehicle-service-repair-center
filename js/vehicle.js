@@ -46,7 +46,7 @@ async function renderVehicleIntake() {
         const vehicles = await apiGet('vehicles');
         vehicleAutocompleteCache = vehicles;
 
-        let tableHTML = '<table class="striped"><thead><tr><th>ID</th><th>Reg Number</th><th>Make / Model</th><th>Owner</th><th>Email</th><th>Phone</th><th>Last Visit</th><th>Status</th><th>Action</th></tr></thead><tbody>';
+        let tableHTML = '<div class="table-responsive"><table class="striped"><thead><tr><th>ID</th><th>Reg Number</th><th>Make / Model</th><th>Owner</th><th>Email</th><th>Phone</th><th>Last Visit</th><th>Status</th><th>Action</th></tr></thead><tbody>';
 
         if (vehicles.length === 0) {
             tableHTML += `<tr><td colspan="9"><div class="empty-state"><i class="fa-solid fa-car-rear"></i><h4>No Vehicles Registered</h4><p>Use the form above to check in your first vehicle.</p></div></td></tr>`;
@@ -67,7 +67,7 @@ async function renderVehicleIntake() {
                     </tr>`;
             });
         }
-        tableHTML += '</tbody></table>';
+        tableHTML += '</tbody></table></div>';
         document.getElementById('allVehiclesTable').innerHTML = tableHTML;
     } catch (err) {
         showError('allVehiclesTable', err.message || 'Failed to load vehicles');
@@ -218,7 +218,7 @@ function renderVehicleHistory(vehicle) {
     if (visits.length === 0) {
         document.getElementById('vehicleHistory').innerHTML = '<p style="color:var(--text-muted);">No previous visits.</p>';
     } else {
-        let html = '<table class="striped"><thead><tr><th>Visit ID</th><th>Date</th><th>Odometer</th><th>Issues</th><th>Status</th><th>Bill</th></tr></thead><tbody>';
+        let html = '<div class="table-responsive"><table class="striped"><thead><tr><th>Visit ID</th><th>Date</th><th>Odometer</th><th>Issues</th><th>Status</th><th>Bill</th></tr></thead><tbody>';
         visits.forEach(v => {
             const billLink = v.bill_id
                 ? `<a href="#" onclick="viewBill(${v.bill_id}); return false;">#${v.bill_id} (${formatCurrency(v.total_amount)})</a>`
@@ -233,7 +233,7 @@ function renderVehicleHistory(vehicle) {
                     <td>${billLink}</td>
                 </tr>`;
         });
-        html += '</tbody></table>';
+        html += '</tbody></table></div>';
         document.getElementById('vehicleHistory').innerHTML = html;
     }
     panel.style.display = 'block';

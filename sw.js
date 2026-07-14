@@ -1,3 +1,5 @@
+const BASE = '/Vehicle%20Service%20%26%20Repair%20Center';
+
 self.addEventListener('install', () => {
   self.skipWaiting();
 });
@@ -26,12 +28,12 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'Lumina AutoWorks';
   const options = {
     body: data.body || '',
-    icon: data.icon || 'logo.png',
-    badge: data.badge || 'logo.png',
+    icon: data.icon || BASE + '/icons/icon-192x192.png',
+    badge: data.badge || BASE + '/icons/icon-192x192.png',
     data: data.data || {},
-    requireInteraction: true,
+    requireInteraction: data.requireInteraction !== false,
     vibrate: [200, 100, 200],
-    tag: 'vehicle-checkin-' + Date.now(),
+    tag: 'vehicle-checkin',
   };
 
   event.waitUntil(self.registration.showNotification(title, options));

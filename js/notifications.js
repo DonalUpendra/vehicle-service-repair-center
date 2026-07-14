@@ -31,10 +31,19 @@ function updateNotificationBadge(count) {
 
 function toggleNotifications() {
     const panel = document.getElementById('notificationPanel');
+    const backdrop = document.getElementById('notificationBackdrop');
     const isOpen = panel.classList.toggle('active');
+    if (backdrop) backdrop.classList.toggle('active', isOpen);
     if (isOpen) {
         loadNotifications();
     }
+}
+
+function closeNotifications() {
+    const panel = document.getElementById('notificationPanel');
+    const backdrop = document.getElementById('notificationBackdrop');
+    if (panel) panel.classList.remove('active');
+    if (backdrop) backdrop.classList.remove('active');
 }
 
 async function loadNotifications() {
@@ -84,9 +93,7 @@ function renderNotificationList(notifications) {
 function clickNotification(e, id, link) {
     e.stopPropagation();
     markNotificationRead(id);
-
-    const panel = document.getElementById('notificationPanel');
-    if (panel) panel.classList.remove('active');
+    closeNotifications();
 
     if (link) {
         if (link.startsWith('index.html#')) {

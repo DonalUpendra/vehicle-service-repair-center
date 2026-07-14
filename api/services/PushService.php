@@ -2,6 +2,17 @@
 
 class PushService {
 
+    private static function log($message, $context = []) {
+        $logFile = __DIR__ . '/../../push-debug.log';
+        $timestamp = date('Y-m-d H:i:s');
+        $entry = "[{$timestamp}] {$message}";
+        if (!empty($context)) {
+            $entry .= ' | ' . json_encode($context);
+        }
+        $entry .= "\n";
+        file_put_contents($logFile, $entry, FILE_APPEND | LOCK_EX);
+    }
+
     private static function getSetting($key) {
         $db = Database::getInstance()->getConnection();
         $stmt = $db->prepare('SELECT setting_value FROM settings WHERE setting_key = ?');
@@ -94,6 +105,16 @@ class PushService {
         $stmt->execute($params);
         $subscriptions = $stmt->fetchAll();
 
+        if (empty($subscriptions)) {
+            self::log('No active technician push subscriptions found');
+            return [];
+        }
+
+        self::log('Sending push to ' . count($subscriptions) . ' technician(s)', [
+            'title' => $title,
+            'exclude_user_id' => $excludeUserId,
+        ]);
+
         $results = [];
         foreach ($subscriptions as $sub) {
             $result = self::sendNotification(
@@ -106,6 +127,7 @@ class PushService {
             );
             $results[] = [
                 'user_id' => (int)$sub['user_id'],
+                'endpoint' => substr($sub['endpoint'], 0, 80) . '...',
                 'success' => $result,
             ];
 
@@ -113,6 +135,8 @@ class PushService {
                 self::removeSubscription($sub['id']);
             }
         }
+
+        self::log('Push results', $results);
         return $results;
     }
 
@@ -121,6 +145,7 @@ class PushService {
         $privateKey = self::getSetting('vapid_private_key');
 
         if (!$publicKey || !$privateKey) {
+            self::log('Missing VAPID keys', ['has_public' => (bool)$publicKey, 'has_private' => (bool)$privateKey]);
             return false;
         }
 
@@ -179,6 +204,7 @@ class PushService {
         );
 
         if ($ciphertext === false) {
+            self::log('Push encryption failed', ['openssl_error' => openssl_error_string()]);
             return false;
         }
 
@@ -210,11 +236,29 @@ class PushService {
         $curlError = curl_error($ch);
         curl_close($ch);
 
-        if ($httpCode === 410) {
+        if ($curlError) {
+            self::log('Push curl error', [
+                'error' => $curlError,
+                'endpoint_domain' => parse_url($endpoint, PHP_URL_HOST),
+            ]);
             return false;
         }
 
-        return $httpCode >= 200 && $httpCode < 300;
+        if ($httpCode === 410) {
+            self::log('Push subscription expired (410)', ['endpoint' => $endpoint]);
+            return false;
+        }
+
+        $success = $httpCode >= 200 && $httpCode < 300;
+        if (!$success) {
+            self::log('Push delivery failed', [
+                'http_code' => $httpCode,
+                'response' => substr($response, 0, 200),
+                'endpoint_domain' => parse_url($endpoint, PHP_URL_HOST),
+            ]);
+        }
+
+        return $success;
     }
 
     public static function removeSubscription($id) {

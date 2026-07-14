@@ -7,7 +7,7 @@ async function renderProducts(searchTerm = '') {
     try {
         const endpoint = searchTerm ? `products?search=${encodeURIComponent(searchTerm)}` : 'products';
         const products = await apiGet(endpoint);
-        let tableHTML = '<table class="striped"><thead><tr><th>ID</th><th>Name</th><th>Sell Price (LKR)</th><th>Cost Price (LKR)</th><th>Margin</th><th>Description</th>' + (isAdmin ? '<th>Actions</th>' : '') + '</tr></thead><tbody>';
+        let tableHTML = '<div class="table-responsive"><table class="striped"><thead><tr><th>ID</th><th>Name</th><th>Sell Price (LKR)</th><th>Cost Price (LKR)</th><th>Margin</th><th>Description</th>' + (isAdmin ? '<th>Actions</th>' : '') + '</tr></thead><tbody>';
 
         if (products.length === 0) {
             const colSpan = isAdmin ? 7 : 6;
@@ -36,7 +36,7 @@ async function renderProducts(searchTerm = '') {
                     </tr>`;
             });
         }
-        tableHTML += '</tbody></table>';
+        tableHTML += '</tbody></table></div>';
         document.getElementById('productsTable').innerHTML = tableHTML;
 
         const addBtn = document.querySelector('#page-products .panel-header .btn-accent');

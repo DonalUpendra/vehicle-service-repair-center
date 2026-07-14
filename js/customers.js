@@ -13,7 +13,7 @@ async function renderCustomers() {
             <button class="btn btn-primary" onclick="searchCustomers()"><i class="fa-solid fa-search"></i> Search</button>
         </div>`;
 
-        html += '<table class="striped"><thead><tr>';
+        html += '<div class="table-responsive"><table class="striped"><thead><tr>';
         html += '<th>Owner</th><th>Email</th><th>Phone</th><th>Vehicle</th><th>Reg No.</th><th>Last Visit</th><th>Action</th>';
         html += '</tr></thead><tbody>';
 
@@ -41,7 +41,7 @@ async function renderCustomers() {
             });
         }
 
-        html += '</tbody></table>';
+        html += '</tbody></table></div>';
         document.getElementById('customersTable').innerHTML = html;
     } catch (err) {
         showError('customersTable', err.message || 'Failed to load customers');

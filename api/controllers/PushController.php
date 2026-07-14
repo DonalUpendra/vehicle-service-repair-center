@@ -58,4 +58,35 @@ class PushController {
 
         jsonResponse(['message' => 'Unsubscribed successfully']);
     }
+
+    public static function test() {
+        requireAuth();
+        $userId = getCurrentUserId();
+        $db = Database::getInstance()->getConnection();
+
+        $stmt = $db->prepare('SELECT * FROM push_subscriptions WHERE user_id = ? ORDER BY id DESC LIMIT 1');
+        $stmt->execute([$userId]);
+        $sub = $stmt->fetch();
+
+        if (!$sub) {
+            jsonError('No push subscription found for your account. Enable notifications first.', 400);
+        }
+
+        $result = PushService::sendNotification(
+            $sub['endpoint'],
+            $sub['p256dh'],
+            $sub['auth'],
+            'Test Push Notification',
+            'If you see this, push notifications are working!',
+            'index.html'
+        );
+
+        jsonResponse([
+            'test_result' => $result ? 'success' : 'failed',
+            'message' => $result
+                ? 'Test push sent successfully. Check your device for the notification.'
+                : 'Push delivery failed. Check push-debug.log in the project root for details.',
+            'endpoint_domain' => parse_url($sub['endpoint'], PHP_URL_HOST),
+        ]);
+    }
 }

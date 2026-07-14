@@ -47,7 +47,7 @@ async function renderReports() {
             </div>
         `;
 
-        let tableHTML = '<table class="striped"><thead><tr><th>Bill ID</th><th>Vehicle</th><th>Owner</th><th>Total (LKR)</th><th>Status</th><th>Date</th><th>Action</th></tr></thead><tbody>';
+        let tableHTML = '<div class="table-responsive"><table class="striped"><thead><tr><th>Bill ID</th><th>Vehicle</th><th>Owner</th><th>Total (LKR)</th><th>Status</th><th>Date</th><th>Action</th></tr></thead><tbody>';
 
         if (bills.length === 0) {
             tableHTML += `<tr><td colspan="7"><div class="empty-state"><i class="fa-solid fa-receipt"></i><h4>No Bills Yet</h4><p>Bills and quotations will appear here once created.</p></div></td></tr>`;
@@ -82,7 +82,7 @@ async function renderReports() {
             });
         }
 
-        tableHTML += '</tbody></table>';
+        tableHTML += '</tbody></table></div>';
         document.getElementById('allBillsTable').innerHTML = tableHTML;
     } catch (err) {
         showError('reportCards', err.message || 'Failed to load reports');

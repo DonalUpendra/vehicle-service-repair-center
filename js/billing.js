@@ -22,7 +22,7 @@ async function searchVehicles() {
             return;
         }
 
-        let html = '<table class="striped"><thead><tr><th>Reg Number</th><th>Owner</th><th>Make / Model</th><th>Last Visit</th><th>Status</th><th>Action</th></tr></thead><tbody>';
+        let html = '<div class="table-responsive"><table class="striped"><thead><tr><th>Reg Number</th><th>Owner</th><th>Make / Model</th><th>Last Visit</th><th>Status</th><th>Action</th></tr></thead><tbody>';
 
         vehicles.forEach(v => {
             const statusDisplay = v.last_visit_status ? getStatusBadge(v.last_visit_status) : '<span class="badge badge-pending"><i class="fa-solid fa-circle"></i> New</span>';
@@ -43,7 +43,7 @@ async function searchVehicles() {
                 </tr>`;
         });
 
-        html += '</tbody></table>';
+        html += '</tbody></table></div>';
         document.getElementById('searchResults').innerHTML = html;
     } catch (err) {
         showToast('Search failed: ' + (err.message || 'Unknown error'), 'error');
@@ -62,7 +62,7 @@ async function viewVehicleHistory(vehicleId) {
         if (visits.length === 0) {
             historyHTML += '<div class="empty-state"><i class="fa-solid fa-inbox"></i><h4>No Previous Visits</h4><p>This vehicle has no service history yet.</p></div>';
         } else {
-            historyHTML += '<table class="striped"><thead><tr><th>Visit ID</th><th>Date</th><th>Status</th><th>Bill Total</th></tr></thead><tbody>';
+            historyHTML += '<div class="table-responsive"><table class="striped"><thead><tr><th>Visit ID</th><th>Date</th><th>Status</th><th>Bill Total</th></tr></thead><tbody>';
             visits.forEach(vv => {
                 historyHTML += `
                     <tr>
@@ -72,7 +72,7 @@ async function viewVehicleHistory(vehicleId) {
                         <td>${vv.total_amount ? '<strong>' + formatCurrency(vv.total_amount) + '</strong>' : '-'}</td>
                     </tr>`;
             });
-            historyHTML += '</tbody></table>';
+            historyHTML += '</tbody></table></div>';
         }
 
         historyHTML += `<button class="btn btn-sm btn-outline" onclick="renderSearchBill()" style="margin-top:12px;"><i class="fa-solid fa-arrow-left"></i> Back to Search</button>`;

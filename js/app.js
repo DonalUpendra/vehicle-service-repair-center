@@ -112,6 +112,7 @@ document.addEventListener('keydown', function(e) {
             m.classList.remove('active');
         });
         closeSidebar();
+        if (typeof closeNotifications === 'function') closeNotifications();
     }
 });
 

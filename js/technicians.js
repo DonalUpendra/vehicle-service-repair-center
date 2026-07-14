@@ -6,7 +6,7 @@ async function renderTechnicians() {
 
     try {
         const techs = await apiGet('users');
-        let tableHTML = '<table class="striped"><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Commission</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+        let tableHTML = '<div class="table-responsive"><table class="striped"><thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Commission</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
 
         if (techs.length === 0) {
             tableHTML += `<tr><td colspan="6"><div class="empty-state"><i class="fa-solid fa-user-slash"></i><h4>No Technicians</h4><p>Add a technician to get started.</p></div></td></tr>`;
@@ -33,7 +33,7 @@ async function renderTechnicians() {
                     </tr>`;
             });
         }
-        tableHTML += '</tbody></table>';
+        tableHTML += '</tbody></table></div>';
         document.getElementById('techniciansTable').innerHTML = tableHTML;
     } catch (err) {
         showError('techniciansTable', err.message || 'Failed to load technicians');

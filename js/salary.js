@@ -23,7 +23,7 @@ async function renderSalaries() {
             return;
         }
 
-        let html = '<table class="striped"><thead><tr><th>ID</th><th>Technician</th><th>Amount (LKR)</th><th>Date</th><th>Notes</th><th>Action</th></tr></thead><tbody>';
+        let html = '<div class="table-responsive"><table class="striped"><thead><tr><th>ID</th><th>Technician</th><th>Amount (LKR)</th><th>Date</th><th>Notes</th><th>Action</th></tr></thead><tbody>';
 
         payments.forEach(p => {
             html += `
@@ -37,7 +37,7 @@ async function renderSalaries() {
                 </tr>`;
         });
 
-        html += '</tbody></table>';
+        html += '</tbody></table></div>';
         document.getElementById('salaryTable').innerHTML = html;
     } catch (err) {
         showError('salaryTable', err.message || 'Failed to load payments');

@@ -74,7 +74,7 @@ async function renderDashboard() {
             ` : ''}
         `;
 
-        let tableHTML = '<table class="striped"><thead><tr><th>Visit ID</th><th>Vehicle</th><th>Owner</th><th>Date</th><th>Status</th><th>Action</th></tr></thead><tbody>';
+        let tableHTML = '<div class="table-responsive"><table class="striped"><thead><tr><th>Visit ID</th><th>Vehicle</th><th>Owner</th><th>Date</th><th>Status</th><th>Action</th></tr></thead><tbody>';
 
         if (visits.length === 0) {
             tableHTML += `<tr><td colspan="6"><div class="empty-state"><i class="fa-solid fa-inbox"></i><h4>No Visits Yet</h4><p>Vehicle check-ins will appear here.</p></div></td></tr>`;
@@ -97,7 +97,7 @@ async function renderDashboard() {
                     </tr>`;
             });
         }
-        tableHTML += '</tbody></table>';
+        tableHTML += '</tbody></table></div>';
         document.getElementById('recentCheckinsTable').innerHTML = tableHTML;
     } catch (err) {
         showError('dashboardCards', (err.message || 'Failed to load dashboard'));
@@ -163,10 +163,10 @@ async function viewBill(billId) {
             </div>
             <hr>
             <h4 style="margin:16px 0 12px;display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-list-ol"></i> Items</h4>
-            <table class="striped">
+            <div class="table-responsive"><table class="striped">
                 <thead><tr><th>Item</th><th>Qty</th><th>Unit Price</th><th style="text-align:right;">Total</th></tr></thead>
                 <tbody>${itemsHTML || '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);">No items</td></tr>'}</tbody>
-            </table>
+            </table></div>
             <div style="text-align:right;margin-top:16px;font-size:1.3rem;font-weight:700;color:var(--primary);">Grand Total: ${formatCurrency(bill.total_amount)}</div>
             <div class="modal-footer" style="border:none;padding:0;margin-top:20px;">
                 <button type="button" class="btn btn-outline btn-sm" onclick="closeViewBillModal()">Close</button>

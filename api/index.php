@@ -334,6 +334,9 @@ if ($resource === 'push') {
     if ($id === 'unsubscribe' && $method === 'POST') {
         PushController::unsubscribe();
     }
+    if ($id === 'test' && $method === 'POST') {
+        PushController::test();
+    }
     jsonError('Not found', 404);
 }
 

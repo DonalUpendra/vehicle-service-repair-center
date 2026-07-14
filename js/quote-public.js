@@ -45,10 +45,10 @@ async function loadPublicQuotePage() {
                 <div><strong>Date</strong><br>${formatDate(bill.created_at)}</div>
                 <div><strong>Status</strong><br>${getStatusBadge(bill.status)}</div>
             </div>
-            <table class="striped">
+            <div class="table-responsive"><table class="striped">
                 <thead><tr><th>Item</th><th>Qty</th><th>Unit Price</th><th style="text-align:right;">Total</th></tr></thead>
                 <tbody>${itemsHTML}</tbody>
-            </table>
+            </table></div>
             <div class="total-row">Grand Total: ${formatCurrency(bill.total_amount)}</div>
             ${['pending_approval', 'draft'].includes(bill.status) ? `
                 <div class="quote-actions">
