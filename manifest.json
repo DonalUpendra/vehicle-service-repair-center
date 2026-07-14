@@ -2,16 +2,18 @@
   "name": "Lumina AutoWorks - Vehicle Service & Repair Center",
   "short_name": "Lumina AutoWorks",
   "description": "Complete vehicle service, repair, and billing management system",
-  "start_url": "/Vehicle%20Service%20%26%20Repair%20Center/index.html",
+  "start_url": "index.html",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#3b82f6",
   "orientation": "any",
+  "scope": "/Vehicle%20Service%20%26%20Repair%20Center/",
   "icons": [
     {
       "src": "icons/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "icons/icon-512x512.png",

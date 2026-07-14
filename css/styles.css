@@ -121,9 +121,14 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 30px;
-    color: #fff;
     box-shadow: 0 8px 24px rgba(245, 158, 11, 0.3);
+}
+
+.login-card .logo-wrapper img {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    border-radius: 8px;
 }
 
 .login-card h2 {
@@ -161,7 +166,7 @@ body {
 
 .login-card .input-icon {
     position: absolute;
-    left: 14px;
+    right: 14px;
     top: 50%;
     transform: translateY(-50%);
     color: var(--text-muted);
@@ -170,10 +175,14 @@ body {
     transition: var(--transition);
 }
 
+.login-card .input-wrapper:focus-within .input-icon {
+    opacity: 0;
+}
+
 .login-card input,
 .login-card select {
     width: 100%;
-    padding: 12px 14px 12px 40px;
+    padding: 12px 40px 12px 14px;
     border: 2px solid var(--border);
     border-radius: var(--radius);
     font-size: 0.9375rem;
@@ -459,9 +468,15 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 20px;
     flex-shrink: 0;
     box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.sidebar-header .s-icon img {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    border-radius: 6px;
 }
 
 .sidebar-header h3 {
@@ -833,6 +848,32 @@ body {
 .page-content.active {
     display: block;
     animation: fadeInUp 0.4s ease;
+}
+
+.install-banner {
+    background: linear-gradient(135deg, #10b981, #059669);
+    border-radius: var(--radius-lg);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+    flex-wrap: wrap;
+}
+
+.install-banner .push-banner-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.install-banner .push-banner-content i {
+    font-size: 1.2rem;
 }
 
 .push-notification-banner {
@@ -1510,9 +1551,13 @@ table.striped tbody tr:nth-child(even):hover {
 }
 
 .quote-card .shop-header .shop-icon {
-    font-size: 2.5rem;
     margin-bottom: 12px;
-    color: var(--accent);
+}
+
+.quote-card .shop-header .shop-icon img {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
 }
 
 .quote-card .shop-header h2 {

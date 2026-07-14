@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#3b82f6">
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="logo.png">
     <title>Lumina AutoWorks</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="css/styles.css">
@@ -18,7 +19,7 @@
     <div class="login-container" id="loginScreen">
         <div class="login-card">
             <div class="logo-wrapper">
-                <i class="fa-solid fa-wrench"></i>
+                <img src="logo.png" alt="Lumina AutoWorks" style="width:48px;height:48px;object-fit:contain;">
             </div>
             <h2>Lumina AutoWorks</h2>
             <p class="subtitle">Management System</p>
@@ -68,7 +69,7 @@
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <div class="s-icon"><i class="fa-solid fa-wrench"></i></div>
+                <div class="s-icon"><img src="logo.png" alt="VSR Center" style="width:28px;height:28px;object-fit:contain;"></div>
                 <div>
                     <h3>VSR Center</h3>
                     <span class="s-sub">Management System</span>
@@ -98,6 +99,15 @@
                 <div class="page-header">
                     <h1><i class="fa-solid fa-chart-pie"></i> Dashboard</h1>
                     <span class="breadcrumb"><i class="fa-solid fa-house"></i> Home / Overview</span>
+                </div>
+                <div class="install-banner" id="installBanner" style="display:none;">
+                    <div class="push-banner-content">
+                        <i class="fa-solid fa-mobile-screen-button"></i>
+                        <span>Install this app on your device for quick access</span>
+                    </div>
+                    <button class="btn btn-accent btn-sm" id="installBtn" onclick="promptInstall()">
+                        <i class="fa-solid fa-download"></i> Install App
+                    </button>
                 </div>
                 <div class="push-notification-banner" id="pushNotificationBanner" style="display:none;">
                     <div class="push-banner-content">

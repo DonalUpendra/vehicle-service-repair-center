@@ -35,7 +35,7 @@ async function loadPublicQuotePage() {
 
         document.getElementById('quoteCardContent').innerHTML = `
             <div class="shop-header">
-                <div class="shop-icon"><i class="fa-solid fa-wrench"></i></div>
+                <div class="shop-icon"><img src="logo.png" alt="Lumina AutoWorks" style="width:48px;height:48px;object-fit:contain;"></div>
                 <h2>Lumina AutoWorks</h2>
                 <p>Quotation #${bill.id}</p>
             </div>

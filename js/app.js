@@ -114,3 +114,29 @@ document.addEventListener('keydown', function(e) {
         closeSidebar();
     }
 });
+
+/* ==================== PWA INSTALL PROMPT ==================== */
+let deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    const banner = document.getElementById('installBanner');
+    if (banner) banner.style.display = 'flex';
+});
+
+window.addEventListener('appinstalled', function() {
+    deferredInstallPrompt = null;
+    const banner = document.getElementById('installBanner');
+    if (banner) banner.style.display = 'none';
+});
+
+function promptInstall() {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    deferredInstallPrompt.userChoice.then(function(result) {
+        deferredInstallPrompt = null;
+        const banner = document.getElementById('installBanner');
+        if (banner) banner.style.display = 'none';
+    });
+}

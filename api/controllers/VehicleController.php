@@ -99,12 +99,13 @@ class VehicleController {
 
         $db = Database::getInstance()->getConnection();
 
-        $stmt = $db->prepare('SELECT * FROM vehicles WHERE registration_number = ?');
-        $stmt->execute([$regNumber]);
-        $existing = $stmt->fetch();
-
-        $db->beginTransaction();
         try {
+            $db->beginTransaction();
+
+            $stmt = $db->prepare('SELECT * FROM vehicles WHERE registration_number = ?');
+            $stmt->execute([$regNumber]);
+            $existing = $stmt->fetch();
+
             if ($existing) {
                 $vehicleId = (int)$existing['id'];
                 $stmt = $db->prepare(
@@ -144,26 +145,33 @@ class VehicleController {
             $vehicleDesc = trim(($make ? $make . ' ' : '') . ($model ?? '') . ' (' . $regNumber . ')');
             $notificationTitle = 'New Vehicle Check-In';
             $notificationBody = $vehicleDesc . ' checked in by ' . ($ownerName ?: 'customer') . '. Reported: ' . ($issues ?: 'No issues reported');
-            $notificationLink = 'index.html#jobs';
 
-            $currentUserName = $_SESSION['user']['name'] ?? 'A staff member';
-            $notifLink = 'index.html#jobs';
-            foreach ($db->query("SELECT id FROM users WHERE role = 'technician' AND active = 1 AND id != " . (int)getCurrentUserId()) as $tech) {
-                NotificationController::create(
-                    (int)$tech['id'],
-                    'info',
-                    $notificationTitle,
-                    $notificationBody,
-                    $notifLink
-                );
+            try {
+                $techStmt = $db->prepare("SELECT id FROM users WHERE role = 'technician' AND active = 1 AND id != ?");
+                $techStmt->execute([getCurrentUserId()]);
+                foreach ($techStmt as $tech) {
+                    NotificationController::create(
+                        (int)$tech['id'],
+                        'info',
+                        $notificationTitle,
+                        $notificationBody,
+                        'index.html#jobs'
+                    );
+                }
+            } catch (\Throwable $e) {
+                error_log('Failed to send notifications: ' . $e->getMessage());
             }
 
-            PushService::sendToAllTechnicians(
-                $notificationTitle,
-                $notificationBody,
-                $notificationLink,
-                getCurrentUserId()
-            );
+            try {
+                PushService::sendToAllTechnicians(
+                    $notificationTitle,
+                    $notificationBody,
+                    'index.html#jobs',
+                    getCurrentUserId()
+                );
+            } catch (\Throwable $e) {
+                error_log('Failed to send push notifications: ' . $e->getMessage());
+            }
 
             jsonResponse([
                 'vehicle' => [
@@ -184,8 +192,11 @@ class VehicleController {
                     'status' => 'checked-in',
                 ],
             ], 201);
-        } catch (Exception $e) {
-            $db->rollBack();
+        } catch (\Throwable $e) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            error_log('VehicleController::checkin error: ' . $e->getMessage());
             jsonError('Failed to check in vehicle: ' . $e->getMessage(), 500);
         }
     }

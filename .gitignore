@@ -5,3 +5,4 @@ repomix-output.md
 repomix.config.json
 .repomixignore
 .kilo/
+api/config/config.php

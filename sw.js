@@ -26,8 +26,8 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'Lumina AutoWorks';
   const options = {
     body: data.body || '',
-    icon: data.icon || 'icons/icon-192x192.png',
-    badge: data.badge || 'icons/icon-192x192.png',
+    icon: data.icon || 'logo.png',
+    badge: data.badge || 'logo.png',
     data: data.data || {},
     requireInteraction: true,
     vibrate: [200, 100, 200],

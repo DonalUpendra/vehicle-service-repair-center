@@ -40,6 +40,7 @@ class PushService {
 
         $publicKey = self::base64urlEncode(hex2bin('04') . $x . $y);
 
+        $privateKeyOut = '';
         openssl_pkey_export($key, $privateKeyOut);
         $privateKey = self::pemToBase64Url($privateKeyOut);
 
@@ -151,6 +152,7 @@ class PushService {
         if (strlen($ly) < 32) $ly = str_repeat("\0", 32 - strlen($ly)) . $ly;
         $localPublicKeyBin = hex2bin('04') . $lx . $ly;
 
+        $localPrivateKeyPem = '';
         openssl_pkey_export($localKeyPair, $localPrivateKeyPem);
 
         $sharedSecret = self::ecdh($localPrivateKeyPem, $userPublicKeyBin);
@@ -281,9 +283,8 @@ class PushService {
             chunk_split(base64_encode($der), 64, "\n") .
             "-----END PUBLIC KEY-----";
 
-        $sharedSecret = '';
-        openssl_pkey_derive($pubPem, $privatePem, $sharedSecret);
-        return $sharedSecret;
+        $sharedSecret = openssl_pkey_derive($pubPem, $privatePem);
+        return $sharedSecret ?: '';
     }
 
     private static function rawEcPointToDer($point) {

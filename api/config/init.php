@@ -1,4 +1,27 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+
+set_exception_handler(function ($e) {
+    $code = ($e->getCode() >= 100 && $e->getCode() < 600) ? (int)$e->getCode() : 500;
+    http_response_code($code);
+    echo json_encode(['error' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    exit;
+});
+
+set_error_handler(function ($severity, $message, $file, $line) {
+    throw new ErrorException($message, 0, $severity, $file, $line);
+});
+
+register_shutdown_function(function () {
+    $err = error_get_last();
+    if ($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Internal server error'], JSON_UNESCAPED_UNICODE);
+    }
+});
+
 session_start();
 
 header('Content-Type: application/json; charset=utf-8');
