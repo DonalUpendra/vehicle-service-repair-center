@@ -59,10 +59,12 @@ function showToast(message, type = 'info') {
 function getStatusBadge(status) {
     const map = {
         'checked-in': '<span class="badge badge-pending"><i class="fa-solid fa-circle"></i> Checked In</span>',
-        'pending_admin_approval': '<span class="badge badge-pending"><i class="fa-solid fa-user-shield"></i> Awaiting Admin</span>',
-        'pending_approval': '<span class="badge badge-pending"><i class="fa-solid fa-clock"></i> Pending Customer</span>',
+        'pending_admin_approval': '<span class="badge badge-pending"><i class="fa-solid fa-user-shield"></i> Awaiting Review</span>',
+        'pending_approval': '<span class="badge badge-pending"><i class="fa-solid fa-clock"></i> Awaiting Customer</span>',
         'approved': '<span class="badge badge-approved"><i class="fa-solid fa-check-circle"></i> Approved</span>',
         'in_progress': '<span class="badge badge-inprogress"><i class="fa-solid fa-spinner"></i> In Progress</span>',
+        'pending_admin_delivery': '<span class="badge badge-pending"><i class="fa-solid fa-clipboard-check"></i> Awaiting Approval</span>',
+        'ready_for_delivery': '<span class="badge badge-inprogress"><i class="fa-solid fa-truck-fast"></i> Ready for Delivery</span>',
         'completed': '<span class="badge badge-completed"><i class="fa-solid fa-circle-check"></i> Completed</span>',
         'rejected': '<span class="badge badge-rejected"><i class="fa-solid fa-xmark-circle"></i> Rejected</span>',
         'draft': '<span class="badge badge-draft"><i class="fa-solid fa-pen"></i> Draft</span>',

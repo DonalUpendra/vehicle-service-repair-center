@@ -14,6 +14,7 @@ async function handleLogin(e) {
         document.getElementById('appLayout').classList.add('active');
         navigateTo('dashboard');
         startNotificationPolling();
+        subscribeToPush();
         showToast(`Welcome back, ${data.user.name}!`, 'success');
     } catch (err) {
         document.getElementById('loginError').style.display = 'flex';

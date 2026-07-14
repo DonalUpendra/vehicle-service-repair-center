@@ -178,7 +178,7 @@ class MailService {
 
     public function sendBillCompletion($to, $customerName, $billId, $totalAmount, $vehicleInfo, $estimatedDelivery = null) {
         $fromName = $this->fromName;
-        $subject = "Service Completed - Bill #{$billId}";
+        $subject = "Vehicle Collected — Bill #{$billId}";
 
         $deliveryInfo = '';
         if ($estimatedDelivery) {
@@ -202,11 +202,67 @@ class MailService {
         <body>
             <div class='container'>
                 <div class='header'>
-                    <h1>Service Completed</h1>
+                    <h1>Vehicle Collected</h1>
                 </div>
                 <div class='content'>
                     <p>Dear {$customerName},</p>
-                    <p>We are pleased to inform you that your vehicle service has been completed.</p>
+                    <p>Your vehicle has been collected from our service center. Thank you for choosing our service!</p>
+
+                    <div class='details'>
+                        <h3>Bill Summary</h3>
+                        <p><strong>Bill ID:</strong> #{$billId}</p>
+                        <p><strong>Vehicle:</strong> {$vehicleInfo}</p>
+                        <p><strong>Total Amount:</strong> Rs. " . number_format($totalAmount, 2) . "</p>
+                    </div>
+
+                    <p>We hope you are satisfied with our work. If you have any questions, please don't hesitate to contact us.</p>
+                </div>
+                <div class='footer'>
+                    <p>{$fromName}<br>Lumina AutoWorks</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        ";
+
+        return $this->send($to, $subject, $body);
+    }
+
+    public function sendReadyForPickup($to, $customerName, $billId, $totalAmount, $vehicleInfo, $estimatedDelivery = null) {
+        $fromName = $this->fromName;
+        $subject = "Vehicle Ready for Pickup — Bill #{$billId}";
+
+        $deliveryInfo = '';
+        if ($estimatedDelivery) {
+            $deliveryDate = date('F j, Y', strtotime($estimatedDelivery));
+            $deliveryInfo = "
+                <div class='delivery-info'>
+                    <h3><i class='fa-solid fa-calendar'></i> Estimated Pickup Date</h3>
+                    <p><strong>{$deliveryDate}</strong></p>
+                </div>";
+        }
+
+        $body = "
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: #27ae60; color: white; padding: 20px; text-align: center; }
+                .content { padding: 20px; background: #f9f9f9; }
+                .details { background: white; padding: 15px; margin: 15px 0; border-radius: 4px; }
+                .delivery-info { background: #eafaf1; border: 1px solid #27ae60; padding: 15px; margin: 15px 0; border-radius: 4px; }
+                .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <h1>Ready for Collection</h1>
+                </div>
+                <div class='content'>
+                    <p>Dear {$customerName},</p>
+                    <p>Great news! Your vehicle has been serviced and is <strong>ready for collection</strong>.</p>
 
                     <div class='details'>
                         <h3>Bill Summary</h3>
@@ -217,7 +273,65 @@ class MailService {
 
                     {$deliveryInfo}
 
-                    <p>Please collect your vehicle. Thank you for choosing our service!</p>
+                    <p>Please visit our service center to collect your vehicle. Thank you for choosing Lumina AutoWorks!</p>
+                </div>
+                <div class='footer'>
+                    <p>{$fromName}<br>Lumina AutoWorks</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        ";
+
+        return $this->send($to, $subject, $body);
+    }
+
+    public function sendRejectionNotice($to, $customerName, $billId, $reason, $vehicleInfo) {
+        $fromName = $this->fromName;
+        $subject = "Quotation Returned for Revision — Bill #{$billId}";
+
+        $reasonInfo = '';
+        if ($reason) {
+            $reasonInfo = "
+                <div class='delivery-info'>
+                    <h3>Reason for Return</h3>
+                    <p>{$reason}</p>
+                </div>";
+        }
+
+        $body = "
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: #e67e22; color: white; padding: 20px; text-align: center; }
+                .content { padding: 20px; background: #f9f9f9; }
+                .details { background: white; padding: 15px; margin: 15px 0; border-radius: 4px; }
+                .delivery-info { background: #fef5e7; border: 1px solid #e67e22; padding: 15px; margin: 15px 0; border-radius: 4px; }
+                .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+            </style>
+        </head>
+        <body>
+            <div class='container'>
+                <div class='header'>
+                    <h1>Quotation Under Review</h1>
+                </div>
+                <div class='content'>
+                    <p>Dear {$customerName},</p>
+                    <p>The quotation for your vehicle has been reviewed and returned to our technician for revision.</p>
+
+                    <div class='details'>
+                        <h3>Bill Details</h3>
+                        <p><strong>Bill ID:</strong> #{$billId}</p>
+                        <p><strong>Vehicle:</strong> {$vehicleInfo}</p>
+                    </div>
+
+                    {$reasonInfo}
+
+                    <p>You will receive an updated quotation once the technician makes the necessary adjustments.</p>
+
+                    <p>If you have any questions, please contact us.</p>
                 </div>
                 <div class='footer'>
                     <p>{$fromName}<br>Lumina AutoWorks</p>

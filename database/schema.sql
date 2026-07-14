@@ -28,7 +28,7 @@ CREATE TABLE visits (
     id INT PRIMARY KEY AUTO_INCREMENT,
     vehicle_id INT NOT NULL,
     check_in_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    status ENUM('checked-in','pending_approval','approved','in_progress','completed','rejected','cancelled') NOT NULL DEFAULT 'checked-in',
+    status ENUM('checked-in','pending_admin_approval','pending_approval','approved','in_progress','pending_admin_delivery','ready_for_delivery','completed','rejected','cancelled') NOT NULL DEFAULT 'checked-in',
     odometer INT,
     issues TEXT,
     bill_id INT DEFAULT NULL,
@@ -50,6 +50,8 @@ CREATE TABLE bills (
     technician_id INT NOT NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'draft',
     total_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+    estimated_delivery DATETIME DEFAULT NULL,
+    admin_note VARCHAR(500) DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (visit_id) REFERENCES visits(id) ON DELETE CASCADE,
     FOREIGN KEY (technician_id) REFERENCES users(id)
@@ -85,8 +87,6 @@ CREATE TABLE settings (
 ) ENGINE=InnoDB;
 
 ALTER TABLE visits ADD CONSTRAINT fk_visits_bill FOREIGN KEY (bill_id) REFERENCES bills(id) ON DELETE SET NULL;
-
-ALTER TABLE bills ADD COLUMN estimated_delivery DATETIME DEFAULT NULL;
 
 CREATE TABLE IF NOT EXISTS notifications (
     id INT PRIMARY KEY AUTO_INCREMENT,

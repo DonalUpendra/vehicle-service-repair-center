@@ -102,13 +102,47 @@ async function createBillForVehicle(vehicleId) {
     }
 }
 
-async function openBillModal(visit) {
+async function openBillModal(visit, prefillItems = []) {
     try {
         await loadProductsCache();
     } catch (e) { /* use cache if available */ }
 
     openModal('billModalOverlay');
 
+    let itemsHTML = '';
+    if (prefillItems.length > 0) {
+        prefillItems.forEach(item => {
+            itemsHTML += `
+                <div class="form-row bill-item-row">
+                    <div class="form-group">
+                        <label>Product / Service</label>
+                        <select class="bill-product-select" onchange="updateBillItemTotal(this)">
+                            <option value="">-- Select --</option>
+                            ${cachedProducts.map(p => `<option value="${p.id}" data-price="${p.unit_price}" ${p.id === item.product_id ? 'selected' : ''}>${p.name} (LKR ${parseFloat(p.unit_price).toLocaleString('en-US', {minimumFractionDigits:2})})</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Qty</label><input type="number" class="bill-qty" value="${item.quantity}" min="1" onchange="updateBillItemTotal(this)"></div>
+                    <div class="form-group"><label>Line Total</label><input type="text" class="bill-line-total" value="${parseFloat(item.line_total).toFixed(2)}" readonly></div>
+                    <div class="form-group"><label>&nbsp;</label><button type="button" class="btn btn-sm btn-danger" onclick="removeBillItemRow(this)" title="Remove"><i class="fa-solid fa-trash"></i></button></div>
+                </div>`;
+        });
+    } else {
+        itemsHTML = `
+            <div class="form-row bill-item-row">
+                <div class="form-group">
+                    <label>Product / Service</label>
+                    <select class="bill-product-select" onchange="updateBillItemTotal(this)">
+                        <option value="">-- Select --</option>
+                        ${cachedProducts.map(p => `<option value="${p.id}" data-price="${p.unit_price}">${p.name} (LKR ${parseFloat(p.unit_price).toLocaleString('en-US', {minimumFractionDigits:2})})</option>`).join('')}
+                    </select>
+                </div>
+                <div class="form-group"><label>Qty</label><input type="number" class="bill-qty" value="1" min="1" onchange="updateBillItemTotal(this)"></div>
+                <div class="form-group"><label>Line Total</label><input type="text" class="bill-line-total" value="0.00" readonly></div>
+                <div class="form-group"><label>&nbsp;</label><button type="button" class="btn btn-sm btn-danger" onclick="removeBillItemRow(this)" title="Remove"><i class="fa-solid fa-trash"></i></button></div>
+            </div>`;
+    }
+
+    const isEdit = prefillItems.length > 0;
     document.getElementById('billModalBody').innerHTML = `
         <div class="form-row" style="margin-bottom:20px;">
             <div style="flex:1;">
@@ -132,27 +166,17 @@ async function openBillModal(visit) {
             <p style="margin:0;white-space:pre-wrap;">${visit.issues}</p>
         </div>
         ` : ''}
+        ${isEdit ? `<div style="margin-bottom:12px;padding:10px 14px;background:#fef3c7;border-radius:8px;border-left:4px solid #f59e0b;"><i class="fa-solid fa-pen-to-square"></i> <strong>Editing Quotation</strong> — Update items and re-submit for admin approval.</div>` : ''}
         <hr>
         <h4 style="margin-bottom:12px;display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-list-ol"></i> Bill Items</h4>
         <div id="billItemsContainer">
-            <div class="form-row bill-item-row">
-                <div class="form-group">
-                    <label>Product / Service</label>
-                    <select class="bill-product-select" onchange="updateBillItemTotal(this)">
-                        <option value="">-- Select --</option>
-                        ${cachedProducts.map(p => `<option value="${p.id}" data-price="${p.unit_price}">${p.name} (LKR ${parseFloat(p.unit_price).toLocaleString('en-US', {minimumFractionDigits:2})})</option>`).join('')}
-                    </select>
-                </div>
-                <div class="form-group"><label>Qty</label><input type="number" class="bill-qty" value="1" min="1" onchange="updateBillItemTotal(this)"></div>
-                <div class="form-group"><label>Line Total</label><input type="text" class="bill-line-total" value="0.00" readonly></div>
-                <div class="form-group"><label>&nbsp;</label><button type="button" class="btn btn-sm btn-danger" onclick="removeBillItemRow(this)" title="Remove"><i class="fa-solid fa-trash"></i></button></div>
-            </div>
+            ${itemsHTML}
         </div>
         <button type="button" class="btn btn-sm btn-outline" onclick="addBillItemRow()" style="margin-top:8px;"><i class="fa-solid fa-plus"></i> Add Item</button>
         <div style="text-align:right;margin-top:16px;font-size:1.2rem;font-weight:700;color:var(--primary);">Total: LKR <span id="billGrandTotal">0.00</span></div>
         <div class="modal-footer" style="border:none;padding:0;margin-top:20px;">
             <button type="button" class="btn btn-outline btn-sm" onclick="closeBillModal()">Cancel</button>
-            <button type="button" class="btn btn-accent btn-sm" onclick="submitBill(${visit.id})"><i class="fa-solid fa-paper-plane"></i> Submit for Admin Review</button>
+            <button type="button" class="btn btn-accent btn-sm" onclick="submitBill(${visit.id})"><i class="fa-solid fa-paper-plane"></i> ${isEdit ? 'Re-submit for Admin Review' : 'Submit for Admin Review'}</button>
         </div>
     `;
 

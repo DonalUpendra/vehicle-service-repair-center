@@ -10,6 +10,14 @@ async function renderDashboard() {
         ]);
 
         const isAdmin = currentUser && currentUser.role === 'admin';
+        let staleCount = 0;
+        if (isAdmin) {
+            try {
+                const stale = await apiGet('visits/stale');
+                staleCount = stale.count || 0;
+            } catch (e) {}
+        }
+
         document.getElementById('dashboardCards').innerHTML = `
             <div class="stat-card card-blue">
                 <div class="card-icon"><i class="fa-solid fa-car"></i></div>
@@ -39,6 +47,15 @@ async function renderDashboard() {
                     <div class="card-label">Completed Today</div>
                 </div>
             </div>
+            ${staleCount > 0 ? `
+            <div class="stat-card card-red" style="cursor:pointer;" onclick="navigateTo('jobs')">
+                <div class="card-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                <div class="card-content">
+                    <div class="card-value">${staleCount}</div>
+                    <div class="card-label">Stale Visits (>7d)</div>
+                </div>
+            </div>
+            ` : ''}
             ${isAdmin ? `
             <div class="stat-card card-blue">
                 <div class="card-icon"><i class="fa-solid fa-sack-dollar"></i></div>

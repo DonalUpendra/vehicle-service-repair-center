@@ -3,6 +3,8 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/init.php';
 require_once __DIR__ . '/../middleware/auth.php';
 require_once __DIR__ . '/../services/MailService.php';
+require_once __DIR__ . '/../services/PushService.php';
+require_once __DIR__ . '/NotificationController.php';
 
 class VehicleController {
 
@@ -139,6 +141,30 @@ class VehicleController {
                 );
             }
 
+            $vehicleDesc = trim(($make ? $make . ' ' : '') . ($model ?? '') . ' (' . $regNumber . ')');
+            $notificationTitle = 'New Vehicle Check-In';
+            $notificationBody = $vehicleDesc . ' checked in by ' . ($ownerName ?: 'customer') . '. Reported: ' . ($issues ?: 'No issues reported');
+            $notificationLink = 'index.html#jobs';
+
+            $currentUserName = $_SESSION['user']['name'] ?? 'A staff member';
+            $notifLink = 'index.html#jobs';
+            foreach ($db->query("SELECT id FROM users WHERE role = 'technician' AND active = 1 AND id != " . (int)getCurrentUserId()) as $tech) {
+                NotificationController::create(
+                    (int)$tech['id'],
+                    'info',
+                    $notificationTitle,
+                    $notificationBody,
+                    $notifLink
+                );
+            }
+
+            PushService::sendToAllTechnicians(
+                $notificationTitle,
+                $notificationBody,
+                $notificationLink,
+                getCurrentUserId()
+            );
+
             jsonResponse([
                 'vehicle' => [
                     'id' => $vehicleId,
@@ -212,5 +238,94 @@ class VehicleController {
         $stmt->execute([(int)$id]);
 
         jsonResponse(['message' => 'Vehicle deleted successfully']);
+    }
+
+    public static function cancelVisit($id) {
+        requireTechnician();
+
+        $db = Database::getInstance()->getConnection();
+        $stmt = $db->prepare(
+            'SELECT vi.id, vi.status, vi.vehicle_id, b.id as bill_id, b.technician_id
+             FROM visits vi
+             LEFT JOIN bills b ON vi.id = b.visit_id
+             WHERE vi.id = ?'
+        );
+        $stmt->execute([(int)$id]);
+        $visit = $stmt->fetch();
+
+        if (!$visit) {
+            jsonError('Visit not found', 404);
+        }
+
+        if ($visit['bill_id'] && getCurrentUserRole() !== 'admin'
+            && (int)$visit['technician_id'] !== getCurrentUserId()) {
+            jsonError('You can only cancel your own visits', 403);
+        }
+
+        $cancellableStatuses = ['checked-in', 'pending_admin_approval', 'pending_approval'];
+        if (!in_array($visit['status'], $cancellableStatuses)) {
+            jsonError("Cannot cancel a visit with status '{$visit['status']}'", 400);
+        }
+
+        if ($visit['bill_id']) {
+            $billStmt = $db->prepare('SELECT status, technician_id FROM bills WHERE id = ?');
+            $billStmt->execute([(int)$visit['bill_id']]);
+            $bill = $billStmt->fetch();
+            if ($bill && !in_array($bill['status'], ['draft', 'rejected'])) {
+                jsonError('Cannot cancel a visit with an active bill that is not draft or rejected', 400);
+            }
+            if ($bill && getCurrentUserRole() !== 'admin'
+                && (int)$bill['technician_id'] !== getCurrentUserId()) {
+                jsonError('You can only cancel your own bills', 403);
+            }
+        }
+
+        $db->beginTransaction();
+        try {
+            $stmt = $db->prepare('UPDATE visits SET status = ? WHERE id = ?');
+            $stmt->execute(['cancelled', (int)$id]);
+
+            if ($visit['bill_id']) {
+                $stmt = $db->prepare('UPDATE bills SET status = ? WHERE id = ?');
+                $stmt->execute(['cancelled', (int)$visit['bill_id']]);
+            }
+
+            $db->commit();
+
+            jsonResponse(['message' => 'Visit cancelled successfully']);
+        } catch (Exception $e) {
+            $db->rollBack();
+            jsonError('Failed to cancel visit: ' . $e->getMessage(), 500);
+        }
+    }
+
+    public static function staleVisits() {
+        requireAdmin();
+        $db = Database::getInstance()->getConnection();
+
+        $stmt = $db->prepare(
+            "SELECT vi.id, vi.status, vi.check_in_date, vi.vehicle_id,
+                    v.registration_number, v.make, v.model, v.owner_name,
+                    b.id as bill_id, b.status as bill_status
+             FROM visits vi
+             JOIN vehicles v ON vi.vehicle_id = v.id
+             LEFT JOIN bills b ON vi.id = b.visit_id
+             WHERE vi.status IN ('checked-in', 'pending_admin_approval')
+               AND vi.check_in_date < DATE_SUB(NOW(), INTERVAL 7 DAY)
+             ORDER BY vi.check_in_date ASC"
+        );
+        $stmt->execute();
+        $visits = $stmt->fetchAll();
+
+        foreach ($visits as &$v) {
+            $v['id'] = (int)$v['id'];
+            $v['vehicle_id'] = (int)$v['vehicle_id'];
+            $v['bill_id'] = $v['bill_id'] ? (int)$v['bill_id'] : null;
+        }
+
+        jsonResponse([
+            'count' => count($visits),
+            'visits' => $visits,
+        ]);
     }
 }

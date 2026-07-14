@@ -16,6 +16,7 @@ require_once __DIR__ . '/controllers/NotificationController.php';
 require_once __DIR__ . '/controllers/SalaryController.php';
 require_once __DIR__ . '/controllers/MakesController.php';
 require_once __DIR__ . '/controllers/ModelsController.php';
+require_once __DIR__ . '/controllers/PushController.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -105,6 +106,9 @@ if ($resource === 'vehicles') {
 
 // Visits
 if ($resource === 'visits') {
+    if ($id === 'stale' && $method === 'GET') {
+        VehicleController::staleVisits();
+    }
     if ($id && $method === 'GET') {
         require_once __DIR__ . '/middleware/auth.php';
         requireAuth();
@@ -125,6 +129,10 @@ if ($resource === 'visits') {
         $visit['bill_id'] = $visit['bill_id'] ? (int)$visit['bill_id'] : null;
         $visit['total_amount'] = $visit['total_amount'] ? (float)$visit['total_amount'] : null;
         jsonResponse($visit);
+    }
+    if ($id && $method === 'PUT') {
+        require_once __DIR__ . '/middleware/auth.php';
+        VehicleController::cancelVisit($id);
     }
     jsonError('Not found', 404);
 }
@@ -193,6 +201,9 @@ if ($resource === 'reports') {
 if ($resource === 'jobs') {
     if ($method === 'GET' && !$id) {
         BillController::jobsList();
+    }
+    if ($id === 'stats' && $method === 'GET') {
+        BillController::jobsStats();
     }
     jsonError('Not found', 404);
 }
@@ -308,6 +319,20 @@ if ($resource === 'notifications') {
     }
     if ($id && is_numeric($id) && $action === 'read' && $method === 'POST') {
         NotificationController::markRead($id);
+    }
+    jsonError('Not found', 404);
+}
+
+// Push Notifications
+if ($resource === 'push') {
+    if ($id === 'public-key' && $method === 'GET') {
+        PushController::publicKey();
+    }
+    if ($id === 'subscribe' && $method === 'POST') {
+        PushController::subscribe();
+    }
+    if ($id === 'unsubscribe' && $method === 'POST') {
+        PushController::unsubscribe();
     }
     jsonError('Not found', 404);
 }

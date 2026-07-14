@@ -64,8 +64,12 @@ function renderNotificationList(notifications) {
         };
         const icon = iconMap[n.type] || iconMap.info;
         const timeAgo = getTimeAgo(n.created_at);
+        const escapedLink = n.link ? n.link.replace(/'/g, "\\'") : '';
+        const onClick = n.link
+            ? `clickNotification(event, ${n.id}, '${escapedLink}')`
+            : `markNotificationRead(${n.id})`;
         html += `
-            <div class="notification-item ${n.is_read ? '' : 'unread'}" onclick="markNotificationRead(${n.id})">
+            <div class="notification-item ${n.is_read ? '' : 'unread'} ${n.link ? 'clickable' : ''}" onclick="${onClick}">
                 <div class="notification-icon">${icon}</div>
                 <div class="notification-content">
                     <div class="notification-title">${n.title}</div>
@@ -77,11 +81,46 @@ function renderNotificationList(notifications) {
     list.innerHTML = html;
 }
 
+function clickNotification(e, id, link) {
+    e.stopPropagation();
+    markNotificationRead(id);
+
+    const panel = document.getElementById('notificationPanel');
+    if (panel) panel.classList.remove('active');
+
+    if (link) {
+        if (link.startsWith('index.html#')) {
+            const hash = link.split('#')[1] || '';
+            if (hash.startsWith('jobs')) {
+                if (typeof navigateTo === 'function') {
+                    navigateTo('jobs');
+                } else {
+                    window.location.href = 'index.html#jobs';
+                }
+                return;
+            }
+            window.location.hash = hash;
+            return;
+        }
+    }
+
+    if (typeof navigateTo === 'function') {
+        navigateTo('jobs');
+    } else {
+        window.location.href = 'index.html#jobs';
+    }
+}
+
 async function markNotificationRead(id) {
     try {
         await apiPost('notifications/' + id + '/read');
-        const item = document.querySelector(`.notification-item[onclick="markNotificationRead(${id})"]`);
-        if (item) item.classList.remove('unread');
+        const items = document.querySelectorAll('.notification-item.unread');
+        items.forEach(item => {
+            const onclick = item.getAttribute('onclick') || '';
+            if (onclick.includes('markNotificationRead(' + id + ')') || onclick.includes('clickNotification(event, ' + id + ',')) {
+                item.classList.remove('unread');
+            }
+        });
         pollNotifications();
     } catch (e) {
         /* ignore */

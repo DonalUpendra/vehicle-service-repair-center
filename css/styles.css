@@ -717,6 +717,28 @@ body {
     background: #c7d8f9;
 }
 
+.notification-item.clickable .notification-content::after {
+    content: '\f054';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 0.7rem;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.notification-item.clickable:hover .notification-content::after {
+    opacity: 1;
+}
+
+.notification-content {
+    position: relative;
+}
+
 .notification-icon {
     flex-shrink: 0;
     font-size: 1.1rem;
@@ -811,6 +833,113 @@ body {
 .page-content.active {
     display: block;
     animation: fadeInUp 0.4s ease;
+}
+
+.push-notification-banner {
+    background: linear-gradient(135deg, var(--primary), #6366f1);
+    border-radius: var(--radius-lg);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+    flex-wrap: wrap;
+}
+
+.push-notification-banner .push-banner-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.push-notification-banner .push-banner-content i {
+    font-size: 1.2rem;
+}
+
+.job-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 16px;
+    padding: 4px;
+    background: var(--card-bg);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-light);
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.job-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: var(--radius);
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+    font-family: inherit;
+}
+
+.job-tab:hover {
+    background: var(--bg);
+    color: var(--text);
+}
+
+.job-tab.active {
+    background: var(--primary);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.25);
+}
+
+.job-tab i {
+    font-size: 0.8rem;
+}
+
+.jtab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.2);
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-left: 2px;
+}
+
+.job-tab:not(.active) .jtab-badge {
+    background: var(--border-light);
+    color: var(--text);
+}
+
+.job-tab.active .jtab-badge {
+    background: rgba(255, 255, 255, 0.25);
+    color: #fff;
+}
+
+@media (max-width: 768px) {
+    .job-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding: 4px 4px 4px 4px;
+    }
+    .job-tab {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
 }
 
 .page-content.active .cards-row .stat-card {

@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/init.php';
+require_once __DIR__ . '/NotificationController.php';
 
 class PublicController {
 
@@ -107,7 +108,51 @@ class PublicController {
             $stmt = $db->prepare('UPDATE visits SET status = ? WHERE id = (SELECT visit_id FROM bills WHERE id = ?)');
             $stmt->execute([$newStatus, (int)$tokenData['bill_id']]);
 
+            $visitStmt = $db->prepare('SELECT visit_id FROM bills WHERE id = ?');
+            $visitStmt->execute([(int)$tokenData['bill_id']]);
+            $visitId = (int)$visitStmt->fetchColumn();
+
+            $logStmt = $db->prepare(
+                'INSERT INTO status_history (bill_id, visit_id, old_status, new_status, source, note)
+                 VALUES (?, ?, ?, ?, ?, ?)'
+            );
+            $logStmt->execute([(int)$tokenData['bill_id'], $visitId, 'pending_approval', $newStatus, 'customer', $description ?: null]);
+
+            $stmt = $db->prepare(
+                'SELECT b.technician_id, v.owner_name, v.make, v.model, v.registration_number
+                 FROM bills b
+                 JOIN visits vi ON b.visit_id = vi.id
+                 JOIN vehicles v ON vi.vehicle_id = v.id
+                 WHERE b.id = ?'
+            );
+            $stmt->execute([(int)$tokenData['bill_id']]);
+            $info = $stmt->fetch();
+
             $db->commit();
+
+            if ($info) {
+                $vehicleStr = trim(($info['make'] ?? '') . ' ' . ($info['model'] ?? '') . ' (' . ($info['registration_number'] ?? '') . ')');
+                $notifLink = 'index.html#jobs';
+
+                if ($action === 'approve') {
+                    NotificationController::create(
+                        (int)$info['technician_id'],
+                        'success',
+                        'Customer Approved Quotation',
+                        "Bill #{$tokenData['bill_id']} approved by customer — {$vehicleStr}. Ready to start work!",
+                        $notifLink
+                    );
+                } else {
+                    $reasonText = $description ? " Reason: {$description}" : '';
+                    NotificationController::create(
+                        (int)$info['technician_id'],
+                        'error',
+                        'Customer Rejected Quotation',
+                        "Bill #{$tokenData['bill_id']} was rejected by customer — {$vehicleStr}.{$reasonText}",
+                        $notifLink
+                    );
+                }
+            }
 
             jsonResponse([
                 'message' => $action === 'approve' ? 'Quotation approved successfully' : 'Quotation rejected',

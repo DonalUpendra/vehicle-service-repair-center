@@ -107,10 +107,14 @@ class BillController {
             jsonError('Visit not found', 404);
         }
 
-        $stmt = $db->prepare('SELECT id FROM bills WHERE visit_id = ?');
+        $stmt = $db->prepare('SELECT id, status, technician_id FROM bills WHERE visit_id = ?');
         $stmt->execute([$visitId]);
-        if ($stmt->fetch()) {
+        $existingBill = $stmt->fetch();
+        if ($existingBill && !in_array($existingBill['status'], ['draft', 'rejected'])) {
             jsonError('A bill already exists for this visit', 409);
+        }
+        if ($existingBill && getCurrentUserRole() !== 'admin' && (int)$existingBill['technician_id'] !== getCurrentUserId()) {
+            jsonError('This bill belongs to another technician', 403);
         }
 
         $stmt = $db->prepare('SELECT v.owner_email, v.owner_name, v.make, v.model, v.registration_number FROM visits vi JOIN vehicles v ON vi.vehicle_id = v.id WHERE vi.id = ?');
@@ -126,11 +130,19 @@ class BillController {
 
         $db->beginTransaction();
         try {
-            $stmt = $db->prepare(
-                'INSERT INTO bills (visit_id, technician_id, status, total_amount, created_at) VALUES (?, ?, ?, ?, NOW())'
-            );
-            $stmt->execute([$visitId, $technicianId, 'pending_admin_approval', $totalAmount]);
-            $billId = (int)$db->lastInsertId();
+            if ($existingBill) {
+                $billId = (int)$existingBill['id'];
+                $stmt = $db->prepare('UPDATE bills SET status = ?, total_amount = ?, admin_note = NULL, technician_id = ? WHERE id = ?');
+                $stmt->execute(['pending_admin_approval', $totalAmount, $technicianId, $billId]);
+                $stmt = $db->prepare('DELETE FROM bill_items WHERE bill_id = ?');
+                $stmt->execute([$billId]);
+            } else {
+                $stmt = $db->prepare(
+                    'INSERT INTO bills (visit_id, technician_id, status, total_amount, estimated_delivery, created_at) VALUES (?, ?, ?, ?, NULL, NOW())'
+                );
+                $stmt->execute([$visitId, $technicianId, 'pending_admin_approval', $totalAmount]);
+                $billId = (int)$db->lastInsertId();
+            }
 
             foreach ($items as $item) {
                 $productId = (int)($item['productId'] ?? $item['product_id'] ?? 0);
@@ -151,16 +163,21 @@ class BillController {
             $stmt = $db->prepare('UPDATE visits SET bill_id = ?, status = ? WHERE id = ?');
             $stmt->execute([$billId, 'pending_admin_approval', $visitId]);
 
+            $oldStatus = $existingBill ? $existingBill['status'] : null;
+            self::logStatusChange($billId, $visitId, $oldStatus, 'pending_admin_approval', 'internal');
+
             $db->commit();
 
             $vehicleStr = trim(($vehicleInfo['make'] ?? '') . ' ' . ($vehicleInfo['model'] ?? '') . ' (' . ($vehicleInfo['registration_number'] ?? '') . ')');
 
+            $actionVerb = $existingBill ? 'resubmitted' : 'created';
+            $notifLink = 'index.html#jobs';
             NotificationController::create(
                 $technicianId,
                 'info',
-                'Quotation Created',
-                "Quotation #{$billId} created for {$vehicleStr} — Total: LKR " . number_format($totalAmount, 2) . ". Awaiting admin review.",
-                null
+                'Quotation ' . ucfirst($actionVerb),
+                "Quotation #{$billId} {$actionVerb} for {$vehicleStr} — Total: LKR " . number_format($totalAmount, 2) . ". Awaiting admin review.",
+                $notifLink
             );
 
             $adminStmt = $db->prepare('SELECT id FROM users WHERE role = ? AND active = 1');
@@ -170,9 +187,9 @@ class BillController {
                 NotificationController::create(
                     (int)$admin['id'],
                     'info',
-                    'New Quotation Needs Review',
-                    "Technician created Bill #{$billId} for {$vehicleStr} — Total: LKR " . number_format($totalAmount, 2) . ". Please review and approve.",
-                    null
+                    $existingBill ? 'Quotation Resubmitted for Review' : 'New Quotation Needs Review',
+                    "Technician {$actionVerb} Bill #{$billId} for {$vehicleStr} — Total: LKR " . number_format($totalAmount, 2) . ". Please review and approve.",
+                    $notifLink
                 );
             }
 
@@ -214,8 +231,9 @@ class BillController {
             $stmt = $db->prepare('UPDATE bills SET status = ? WHERE id = ?');
             $stmt->execute(['pending_admin_approval', (int)$id]);
 
-            $stmt = $db->prepare('UPDATE visits SET status = ? WHERE id = ?');
-            $stmt->execute(['pending_admin_approval', (int)$bill['visit_id']]);
+            self::syncVisitStatus((int)$bill['visit_id'], 'pending_admin_approval');
+
+            self::logStatusChange((int)$id, (int)$bill['visit_id'], 'draft', 'pending_admin_approval', 'internal');
 
             $db->commit();
 
@@ -233,7 +251,7 @@ class BillController {
                     'info',
                     'Quotation Submitted for Review',
                     "Bill #{$id} submitted for {$vehicleStr} — Total: LKR " . number_format((float)$billInfo['total_amount'], 2) . ". Please review and approve.",
-                    null
+                    'index.html#jobs'
                 );
             }
 
@@ -253,10 +271,13 @@ class BillController {
 
         $allowedTransitions = [
             'pending_admin_approval' => ['pending_approval', 'rejected'],
-            'pending_approval'       => ['approved', 'rejected'],
+            'pending_approval'       => [],
             'approved'               => ['in_progress', 'cancelled'],
-            'in_progress'            => ['completed', 'cancelled'],
-            'draft'                  => ['cancelled'],
+            'in_progress'            => ['pending_admin_delivery', 'completed', 'cancelled'],
+            'pending_admin_delivery' => ['ready_for_delivery', 'in_progress'],
+            'ready_for_delivery'     => ['completed', 'in_progress'],
+            'draft'                  => ['pending_admin_approval', 'cancelled'],
+            'rejected'               => ['draft'],
         ];
 
         $db = Database::getInstance()->getConnection();
@@ -276,24 +297,35 @@ class BillController {
         $currentStatus = $bill['status'];
         $allowed = $allowedTransitions[$currentStatus] ?? [];
 
+        // Admin override: can cancel stuck pending_approval quotations
+        if ($currentStatus === 'pending_approval' && getCurrentUserRole() === 'admin') {
+            $allowed = ['cancelled'];
+        }
+
         if (!in_array($newStatus, $allowed)) {
             jsonError("Cannot transition from '{$currentStatus}' to '{$newStatus}'", 400);
         }
 
         $db->beginTransaction();
         try {
-            $stmt = $db->prepare('UPDATE bills SET status = ? WHERE id = ?');
-            $stmt->execute([$newStatus, (int)$id]);
+            $adminNote = trim($data['admin_note'] ?? '');
 
-            $visitStatusMap = [
-                'rejected' => 'rejected',
-                'cancelled' => 'cancelled',
-                'completed' => 'completed',
-            ];
+            if ($newStatus === 'rejected' && $currentStatus === 'pending_admin_approval' && $adminNote) {
+                $stmt = $db->prepare('UPDATE bills SET status = ?, admin_note = ? WHERE id = ?');
+                $stmt->execute([$newStatus, $adminNote, (int)$id]);
+            } elseif ($newStatus === 'draft' && $currentStatus === 'rejected') {
+                $stmt = $db->prepare('UPDATE bills SET status = ?, admin_note = NULL WHERE id = ?');
+                $stmt->execute([$newStatus, (int)$id]);
+            } elseif (($newStatus === 'in_progress' && $currentStatus === 'ready_for_delivery')
+                   || ($newStatus === 'in_progress' && $currentStatus === 'pending_admin_delivery')) {
+                $stmt = $db->prepare('UPDATE bills SET status = ?, estimated_delivery = NULL WHERE id = ?');
+                $stmt->execute([$newStatus, (int)$id]);
+            } else {
+                $stmt = $db->prepare('UPDATE bills SET status = ? WHERE id = ?');
+                $stmt->execute([$newStatus, (int)$id]);
+            }
 
-            $mapped = $visitStatusMap[$newStatus] ?? $newStatus;
-            $stmt = $db->prepare('UPDATE visits SET status = ? WHERE id = ?');
-            $stmt->execute([$mapped, (int)$bill['visit_id']]);
+            self::syncVisitStatus((int)$bill['visit_id'], $newStatus);
 
             $stmt = $db->prepare('SELECT v.owner_email, v.owner_name, v.make, v.model, v.registration_number, b.total_amount, b.technician_id FROM bills b JOIN visits vi ON b.visit_id = vi.id JOIN vehicles v ON vi.vehicle_id = v.id WHERE b.id = ?');
             $stmt->execute([(int)$id]);
@@ -308,26 +340,18 @@ class BillController {
                 $stmt = $db->prepare('INSERT INTO approval_tokens (token, bill_id, expires_at, used) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY), 0)');
                 $stmt->execute([$token, (int)$id]);
 
-                $vehicleStr = trim(($notificationInfo['make'] ?? '') . ' ' . ($notificationInfo['model'] ?? '') . ' (' . ($notificationInfo['registration_number'] ?? '') . ')');
-
-                if (!empty($notificationInfo['owner_email'])) {
-                    $mail = new MailService();
-                    $mail->sendApprovalRequest(
-                        $notificationInfo['owner_email'],
-                        $notificationInfo['owner_name'] ?? 'Customer',
-                        (int)$id,
-                        $token,
-                        (float)$notificationInfo['total_amount'],
-                        $vehicleStr
-                    );
-                }
+                $pendingApprovalToken = $token;
+                $pendingApprovalEmail = $notificationInfo['owner_email'] ?? '';
+                $pendingApprovalName = $notificationInfo['owner_name'] ?? 'Customer';
+                $pendingApprovalAmount = (float)$notificationInfo['total_amount'];
+                $pendingApprovalVehicle = trim(($notificationInfo['make'] ?? '') . ' ' . ($notificationInfo['model'] ?? '') . ' (' . ($notificationInfo['registration_number'] ?? '') . ')');
 
                 NotificationController::create(
                     (int)$notificationInfo['technician_id'],
                     'success',
                     'Admin Approved Quotation',
-                    "Bill #{$id} approved by admin — {$vehicleStr}. Approval email sent to customer.",
-                    null
+                    "Bill #{$id} approved by admin — {$pendingApprovalVehicle}. Approval email being sent to customer.",
+                    'index.html#jobs'
                 );
             }
 
@@ -338,19 +362,42 @@ class BillController {
                     'success',
                     'Job Approved',
                     "Bill #{$id} approved by customer — {$vehicleStr}. Ready to start work!",
-                    null
+                    'index.html#jobs'
                 );
             }
 
             if ($newStatus === 'rejected' && $notificationInfo) {
                 $vehicleStr = trim(($notificationInfo['make'] ?? '') . ' ' . ($notificationInfo['model'] ?? '') . ' (' . ($notificationInfo['registration_number'] ?? '') . ')');
                 $rejectedBy = $currentStatus === 'pending_admin_approval' ? 'admin' : 'customer';
+                $noteText = $adminNote ? " Reason: {$adminNote}" : '';
                 NotificationController::create(
                     (int)$notificationInfo['technician_id'],
                     'error',
-                    'Job Rejected',
-                    "Bill #{$id} was rejected by {$rejectedBy} — {$vehicleStr}.",
-                    null
+                    'Quotation Rejected',
+                    "Bill #{$id} was rejected by {$rejectedBy} — {$vehicleStr}.{$noteText}",
+                    'index.html#jobs'
+                );
+            }
+
+            if ($newStatus === 'in_progress' && $currentStatus === 'ready_for_delivery' && $notificationInfo) {
+                $vehicleStr = trim(($notificationInfo['make'] ?? '') . ' ' . ($notificationInfo['model'] ?? '') . ' (' . ($notificationInfo['registration_number'] ?? '') . ')');
+                NotificationController::create(
+                    (int)$notificationInfo['technician_id'],
+                    'warning',
+                    'Job Reopened',
+                    "Bill #{$id} reopened from ready for delivery — {$vehicleStr}. Additional work needed.",
+                    'index.html#jobs'
+                );
+            }
+
+            if ($newStatus === 'in_progress' && $currentStatus === 'pending_admin_delivery' && $notificationInfo) {
+                $vehicleStr = trim(($notificationInfo['make'] ?? '') . ' ' . ($notificationInfo['model'] ?? '') . ' (' . ($notificationInfo['registration_number'] ?? '') . ')');
+                NotificationController::create(
+                    (int)$notificationInfo['technician_id'],
+                    'warning',
+                    'Delivery Rejected',
+                    "Admin returned Bill #{$id} for additional work — {$vehicleStr}.",
+                    'index.html#jobs'
                 );
             }
 
@@ -368,7 +415,72 @@ class BillController {
                 }
             }
 
+            if ($newStatus === 'ready_for_delivery' && $currentStatus === 'pending_admin_delivery' && $notificationInfo) {
+                $vehicleStr = trim(($notificationInfo['make'] ?? '') . ' ' . ($notificationInfo['model'] ?? '') . ' (' . ($notificationInfo['registration_number'] ?? '') . ')');
+
+                $deliveryApprovedEmail = !empty($notificationInfo['owner_email']) ? $notificationInfo['owner_email'] : null;
+                $deliveryApprovedName = $notificationInfo['owner_name'] ?? 'Customer';
+                $deliveryApprovedAmount = (float)$notificationInfo['total_amount'];
+                $deliveryApprovedVehicle = $vehicleStr;
+
+                NotificationController::create(
+                    (int)$notificationInfo['technician_id'],
+                    'success',
+                    'Delivery Approved',
+                    "Admin approved delivery for Bill #{$id} — {$vehicleStr}. Customer will be notified.",
+                    'index.html#jobs'
+                );
+            }
+
+            if ($newStatus === 'pending_admin_approval' && $currentStatus === 'draft' && $notificationInfo) {
+                $vehicleStr = trim(($notificationInfo['make'] ?? '') . ' ' . ($notificationInfo['model'] ?? '') . ' (' . ($notificationInfo['registration_number'] ?? '') . ')');
+                NotificationController::create(
+                    (int)$notificationInfo['technician_id'],
+                    'info',
+                    'Quotation Submitted',
+                    "Bill #{$id} submitted for {$vehicleStr} — Total: LKR " . number_format((float)$notificationInfo['total_amount'], 2) . ". Awaiting admin review.",
+                    'index.html#jobs'
+                );
+                $adminStmt = $db->prepare('SELECT id FROM users WHERE role = ? AND active = 1');
+                $adminStmt->execute(['admin']);
+                $admins = $adminStmt->fetchAll();
+                foreach ($admins as $admin) {
+                    NotificationController::create(
+                        (int)$admin['id'],
+                        'info',
+                        'Quotation Submitted for Review',
+                        "Technician submitted Bill #{$id} for {$vehicleStr} — Total: LKR " . number_format((float)$notificationInfo['total_amount'], 2) . ". Please review and approve.",
+                        'index.html#jobs'
+                    );
+                }
+            }
+
+            self::logStatusChange((int)$id, (int)$bill['visit_id'], $currentStatus, $newStatus, 'internal', $adminNote ?: null);
+
             $db->commit();
+
+            if (isset($pendingApprovalToken) && !empty($pendingApprovalEmail)) {
+                $mail = new MailService();
+                $mail->sendApprovalRequest(
+                    $pendingApprovalEmail,
+                    $pendingApprovalName ?? 'Customer',
+                    (int)$id,
+                    $pendingApprovalToken,
+                    $pendingApprovalAmount,
+                    $pendingApprovalVehicle
+                );
+            }
+
+            if (isset($deliveryApprovedEmail) && $deliveryApprovedEmail) {
+                $mail = new MailService();
+                $mail->sendReadyForPickup(
+                    $deliveryApprovedEmail,
+                    $deliveryApprovedName,
+                    (int)$id,
+                    $deliveryApprovedAmount,
+                    $deliveryApprovedVehicle
+                );
+            }
 
             jsonResponse([
                 'message' => "Bill status updated to '{$newStatus}'",
@@ -393,19 +505,32 @@ class BillController {
 
         $token = generateToken();
 
-        $stmt = $db->prepare('DELETE FROM approval_tokens WHERE bill_id = ?');
-        $stmt->execute([(int)$id]);
+        $oldStatus = $bill['status'];
 
-        $stmt = $db->prepare('INSERT INTO approval_tokens (token, bill_id, expires_at, used) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY), 0)');
-        $stmt->execute([$token, (int)$id]);
+        $db->beginTransaction();
+        try {
+            $stmt = $db->prepare('DELETE FROM approval_tokens WHERE bill_id = ?');
+            $stmt->execute([(int)$id]);
 
-$stmt = $db->prepare('UPDATE bills SET status = ? WHERE id = ?');
-        $stmt->execute(['pending_approval', (int)$id]);
+            $stmt = $db->prepare('INSERT INTO approval_tokens (token, bill_id, expires_at, used) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 7 DAY), 0)');
+            $stmt->execute([$token, (int)$id]);
 
-        $stmt = $db->prepare('UPDATE visits SET status = ? WHERE id = ?');
-        $stmt->execute(['pending_approval', (int)$bill['visit_id']]);
+            $stmt = $db->prepare('UPDATE bills SET status = ? WHERE id = ?');
+            $stmt->execute(['pending_approval', (int)$id]);
+
+            $stmt = $db->prepare('UPDATE visits SET status = ? WHERE id = ?');
+            $stmt->execute(['pending_approval', (int)$bill['visit_id']]);
+
+            self::logStatusChange((int)$id, (int)$bill['visit_id'], $oldStatus, 'pending_approval', 'internal');
+
+            $db->commit();
+        } catch (Exception $e) {
+            $db->rollBack();
+            jsonError('Failed to resend approval: ' . $e->getMessage(), 500);
+        }
 
         $mailSent = false;
+
         $stmt = $db->prepare('SELECT v.owner_email, v.owner_name, v.make, v.model, v.registration_number, b.total_amount FROM bills b JOIN visits vi ON b.visit_id = vi.id JOIN vehicles v ON vi.vehicle_id = v.id WHERE b.id = ?');
         $stmt->execute([(int)$id]);
         $customerInfo = $stmt->fetch();
@@ -425,7 +550,6 @@ $stmt = $db->prepare('UPDATE bills SET status = ? WHERE id = ?');
 
         jsonResponse([
             'message' => 'Approval email resent',
-            'token' => $token,
         ]);
     }
 
@@ -460,10 +584,10 @@ $stmt = $db->prepare('UPDATE bills SET status = ? WHERE id = ?');
         $db->beginTransaction();
         try {
             $stmt = $db->prepare('UPDATE bills SET status = ?, estimated_delivery = ? WHERE id = ?');
-            $stmt->execute(['completed', $estimatedDelivery, (int)$id]);
+            $stmt->execute(['pending_admin_delivery', $estimatedDelivery, (int)$id]);
 
             $stmt = $db->prepare('UPDATE visits SET status = ? WHERE id = ?');
-            $stmt->execute(['completed', (int)$bill['visit_id']]);
+            $stmt->execute(['pending_admin_delivery', (int)$bill['visit_id']]);
 
             $stmt = $db->prepare('SELECT v.owner_email, v.owner_name, v.make, v.model, v.registration_number, b.total_amount, b.technician_id FROM bills b JOIN visits vi ON b.visit_id = vi.id JOIN vehicles v ON vi.vehicle_id = v.id WHERE b.id = ?');
             $stmt->execute([(int)$id]);
@@ -471,33 +595,31 @@ $stmt = $db->prepare('UPDATE bills SET status = ? WHERE id = ?');
 
             NotificationController::create(
                 (int)$jobInfo['technician_id'],
-                'success',
-                'Job Completed',
-                "Job for Bill #{$id} — {$jobInfo['make']} {$jobInfo['model']} ({$jobInfo['registration_number']}) marked as completed.",
-                null
+                'info',
+                'Job Marked as Done',
+                "Job for Bill #{$id} — {$jobInfo['make']} {$jobInfo['model']} ({$jobInfo['registration_number']}) marked as done. Awaiting admin review.",
+                'index.html#jobs'
             );
+
+            $adminStmt = $db->prepare('SELECT id FROM users WHERE role = ? AND active = 1');
+            $adminStmt->execute(['admin']);
+            $admins = $adminStmt->fetchAll();
+            foreach ($admins as $admin) {
+                NotificationController::create(
+                    (int)$admin['id'],
+                    'info',
+                    'Job Ready for Review',
+                    "Technician marked Bill #{$id} — {$jobInfo['make']} {$jobInfo['model']} ({$jobInfo['registration_number']}) as done. Please review and approve delivery.",
+                    'index.html#jobs'
+                );
+            }
+
+            self::logStatusChange((int)$id, (int)$bill['visit_id'], $bill['status'], 'pending_admin_delivery', 'internal');
 
             $db->commit();
 
-            $mailSent = false;
-            if (MailService::isEmailEnabled()) {
-                if ($jobInfo && !empty($jobInfo['owner_email'])) {
-                    $mail = new MailService();
-                    $vehicleStr = trim(($jobInfo['make'] ?? '') . ' ' . ($jobInfo['model'] ?? '') . ' (' . ($jobInfo['registration_number'] ?? '') . '');
-                    $mailSent = $mail->sendBillCompletion(
-                        $jobInfo['owner_email'],
-                        $jobInfo['owner_name'] ?? 'Customer',
-                        (int)$id,
-                        (float)$jobInfo['total_amount'],
-                        $vehicleStr,
-                        $estimatedDelivery
-                    );
-                }
-            }
-
             jsonResponse([
-                'message' => 'Job marked as completed. Customer notified.',
-                'mail_sent' => $mailSent,
+                'message' => 'Job marked as done. Awaiting admin review.',
             ]);
         } catch (Exception $e) {
             $db->rollBack();
@@ -508,29 +630,64 @@ $stmt = $db->prepare('UPDATE bills SET status = ? WHERE id = ?');
     public static function jobsList() {
         requireTechnician();
         $db = Database::getInstance()->getConnection();
+        $statusFilter = trim($_GET['status'] ?? '');
+        $userId = getCurrentUserId();
+        $isAdmin = getCurrentUserRole() === 'admin';
 
-        $stmt = $db->prepare(
-            'SELECT b.id, b.status, b.total_amount, b.estimated_delivery, b.created_at,
-                    b.technician_id,
-                    u.commission_percentage,
-                    v.registration_number, v.make, v.model, v.owner_name, v.owner_email,
-                    vi.check_in_date, vi.status as visit_status, u.name as technician_name
-             FROM bills b
-             JOIN visits vi ON b.visit_id = vi.id
-             JOIN vehicles v ON vi.vehicle_id = v.id
-             JOIN users u ON b.technician_id = u.id
-              WHERE b.status IN (\'pending_admin_approval\', \'approved\', \'in_progress\', \'completed\', \'rejected\')
-              ORDER BY
+        $sql = 'SELECT b.id, b.status, b.admin_note, b.total_amount, b.estimated_delivery, b.created_at,
+                      b.technician_id,
+                      u.commission_percentage,
+                      v.registration_number, v.make, v.model, v.owner_name, v.owner_email,
+                      vi.check_in_date, vi.status as visit_status, u.name as technician_name,
+                      at.description as rejection_reason
+               FROM bills b
+               JOIN visits vi ON b.visit_id = vi.id
+               JOIN vehicles v ON vi.vehicle_id = v.id
+               JOIN users u ON b.technician_id = u.id
+               LEFT JOIN approval_tokens at ON b.id = at.bill_id
+               WHERE 1=1';
+
+        $params = [];
+
+        if ($statusFilter) {
+            if (strpos($statusFilter, ',') !== false) {
+                $statuses = array_map('trim', explode(',', $statusFilter));
+                $placeholders = implode(',', array_fill(0, count($statuses), '?'));
+                $sql .= " AND b.status IN ($placeholders)";
+                $params = $statuses;
+            } else {
+                $sql .= ' AND b.status = ?';
+                $params = [$statusFilter];
+            }
+        }
+
+        if ($statusFilter === 'draft' && !$isAdmin) {
+            $sql .= ' AND b.technician_id = ?';
+            $params[] = $userId;
+        }
+
+        if (in_array($statusFilter, ['approved', 'in_progress']) && !$isAdmin) {
+            $sql .= ' AND b.technician_id = ?';
+            $params[] = $userId;
+        }
+
+        $sql .= ' ORDER BY
                 CASE b.status
                     WHEN \'pending_admin_approval\' THEN 0
-                    WHEN \'in_progress\' THEN 1
-                    WHEN \'approved\' THEN 2
-                    WHEN \'completed\' THEN 3
-                    WHEN \'rejected\' THEN 4
+                    WHEN \'draft\' THEN 1
+                    WHEN \'in_progress\' THEN 2
+                    WHEN \'pending_approval\' THEN 3
+                    WHEN \'approved\' THEN 4
+                    WHEN \'pending_admin_delivery\' THEN 5
+                    WHEN \'ready_for_delivery\' THEN 6
+                    WHEN \'completed\' THEN 7
+                    WHEN \'rejected\' THEN 8
+                    WHEN \'cancelled\' THEN 9
                 END,
-                b.created_at DESC'
-        );
-        $stmt->execute();
+                b.created_at DESC';
+
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
         $jobs = $stmt->fetchAll();
 
         foreach ($jobs as &$j) {
@@ -542,5 +699,69 @@ $stmt = $db->prepare('UPDATE bills SET status = ? WHERE id = ?');
         }
 
         jsonResponse($jobs);
+    }
+
+    public static function jobsStats() {
+        requireTechnician();
+        $db = Database::getInstance()->getConnection();
+        $userId = getCurrentUserId();
+        $isAdmin = getCurrentUserRole() === 'admin';
+
+        $stats = [];
+
+        $countStmt = $db->prepare('SELECT COUNT(*) FROM bills b WHERE b.status = ?');
+        $statuses = ['pending_admin_approval', 'pending_approval', 'approved', 'in_progress', 'pending_admin_delivery', 'ready_for_delivery', 'completed', 'rejected', 'cancelled'];
+        foreach ($statuses as $s) {
+            $countStmt->execute([$s]);
+            $stats[$s] = (int)$countStmt->fetchColumn();
+        }
+
+        $myDraftStmt = $db->prepare('SELECT COUNT(*) FROM bills WHERE status = ? AND technician_id = ?');
+        $myDraftStmt->execute(['draft', $userId]);
+        $stats['my_drafts'] = (int)$myDraftStmt->fetchColumn();
+
+        $myActiveStmt = $db->prepare('SELECT COUNT(*) FROM bills WHERE status IN (?, ?) AND technician_id = ?');
+        $myActiveStmt->execute(['approved', 'in_progress', $userId]);
+        $stats['my_active'] = (int)$myActiveStmt->fetchColumn();
+
+        if ($isAdmin) {
+            $stats['total_pending_action'] = $stats['pending_admin_approval'];
+            $stats['total_active'] = $stats['approved'] + $stats['in_progress'];
+            $stats['total_awaiting_delivery'] = $stats['ready_for_delivery'];
+        } else {
+            $stats['total_active'] = $stats['my_active'];
+            $stats['total_drafts'] = $stats['my_drafts'];
+        }
+
+        jsonResponse($stats);
+    }
+
+    private static function syncVisitStatus($visitId, $newStatus) {
+        if ($newStatus === 'draft') return;
+        $db = Database::getInstance()->getConnection();
+        $visitMap = [
+            'pending_admin_approval' => 'pending_admin_approval',
+            'pending_approval' => 'pending_approval',
+            'approved' => 'approved',
+            'in_progress' => 'in_progress',
+            'pending_admin_delivery' => 'pending_admin_delivery',
+            'ready_for_delivery' => 'ready_for_delivery',
+            'completed' => 'completed',
+            'rejected' => 'rejected',
+            'cancelled' => 'cancelled',
+        ];
+        $mapped = $visitMap[$newStatus] ?? $newStatus;
+        $stmt = $db->prepare('UPDATE visits SET status = ? WHERE id = ?');
+        $stmt->execute([$mapped, (int)$visitId]);
+    }
+
+    private static function logStatusChange($billId, $visitId, $oldStatus, $newStatus, $source = 'internal', $note = null) {
+        $db = Database::getInstance()->getConnection();
+        $userId = getCurrentUserId() ?? null;
+        $stmt = $db->prepare(
+            'INSERT INTO status_history (bill_id, visit_id, old_status, new_status, changed_by, source, note)
+             VALUES (?, ?, ?, ?, ?, ?, ?)'
+        );
+        $stmt->execute([$billId, $visitId, $oldStatus, $newStatus, $userId, $source, $note]);
     }
 }

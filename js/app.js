@@ -61,8 +61,13 @@ async function init() {
         setupAppLayout();
         document.getElementById('loginScreen').classList.add('hidden');
         document.getElementById('appLayout').classList.add('active');
-        navigateTo('dashboard');
+
+        const hash = window.location.hash.replace('#', '');
+        const targetPage = hash || 'dashboard';
+        navigateTo(targetPage);
+
         startNotificationPolling();
+        initPushNotifications();
     } catch {
         document.getElementById('loginScreen').classList.remove('hidden');
         document.getElementById('appLayout').classList.remove('active');
@@ -71,6 +76,14 @@ async function init() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+
+window.addEventListener('hashchange', function() {
+    if (!currentUser) return;
+    const hash = window.location.hash.replace('#', '');
+    if (hash && hash !== currentPage) {
+        navigateTo(hash);
+    }
+});
 
 /* ==================== MODAL BACKDROP CLICK TO CLOSE ==================== */
 document.getElementById('productModalOverlay')?.addEventListener('click', function(e) {
