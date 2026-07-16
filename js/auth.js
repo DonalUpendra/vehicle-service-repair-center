@@ -60,7 +60,6 @@ function setupAppLayout() {
     } else {
         navHTML += '<div class="nav-section">Main</div>';
         navHTML += '<a data-page="dashboard" class="active" onclick="navigateTo(\'dashboard\')"><i class="fa-solid fa-chart-pie nav-icon"></i> Dashboard</a>';
-        navHTML += '<a data-page="vehicle-intake" onclick="navigateTo(\'vehicle-intake\')"><i class="fa-solid fa-car-side nav-icon"></i> Vehicle Check-In</a>';
         navHTML += '<a data-page="search-bill" onclick="navigateTo(\'search-bill\')"><i class="fa-solid fa-file-invoice nav-icon"></i> Search & Billing</a>';
         navHTML += '<a data-page="jobs" onclick="navigateTo(\'jobs\')"><i class="fa-solid fa-briefcase nav-icon"></i> Job Management</a>';
         navHTML += '<a data-page="products" onclick="navigateTo(\'products\')"><i class="fa-solid fa-boxes-stacked nav-icon"></i> Product Prices</a>';

@@ -81,7 +81,7 @@ class VehicleController {
     }
 
     public static function checkin() {
-        requireTechnician();
+        requireAdmin();
         $data = getJsonInput();
 
         $regNumber = trim($data['registration_number'] ?? $data['registrationNumber'] ?? '');

@@ -38,6 +38,10 @@ async function onMakeChange() {
 }
 
 async function renderVehicleIntake() {
+    if (!currentUser || currentUser.role !== 'admin') {
+        document.getElementById('allVehiclesTable').innerHTML = '<div class="empty-state"><i class="fa-solid fa-lock"></i><h4>Access Denied</h4><p>Only administrators can access vehicle check-in.</p></div>';
+        return;
+    }
     showLoading('allVehiclesTable', 'Loading vehicles...');
     clearIntakeForm();
     await loadMakesDropdown();
