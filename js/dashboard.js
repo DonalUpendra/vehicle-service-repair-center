@@ -10,6 +10,11 @@ async function renderDashboard() {
         ]);
 
         const isAdmin = currentUser && currentUser.role === 'admin';
+
+        if (!isAdmin) {
+            await renderCurrentJob();
+        }
+
         let staleCount = 0;
         if (isAdmin) {
             try {
@@ -114,6 +119,9 @@ function closeViewBillModal() {
 }
 
 async function viewBill(billId) {
+    document.getElementById('viewBillModalBody').innerHTML = '<div class="loading-state"><span class="spinner"></span><p>Loading bill...</p></div>';
+    openModal('viewBillModalOverlay');
+
     try {
         const bill = await apiGet('bills/' + billId);
 
@@ -176,6 +184,82 @@ async function viewBill(billId) {
         openModal('viewBillModalOverlay');
     } catch (err) {
         showToast('Failed to load bill: ' + (err.message || 'Unknown error'), 'error');
+        closeModal('viewBillModalOverlay');
+    }
+}
+
+async function renderCurrentJob() {
+    const section = document.getElementById('currentJobSection');
+    const container = document.getElementById('currentJobContainer');
+    if (!section || !container) return;
+
+    try {
+        const job = await apiGet('jobs/current');
+
+        if (!job) {
+            section.style.display = 'none';
+            return;
+        }
+
+        section.style.display = '';
+
+        const canStartWork = job.status === 'approved';
+        const canMarkDone = job.status === 'in_progress';
+
+        const itemsCount = (job.items || []).length;
+
+        container.innerHTML = `
+            <div class="current-job-card">
+                <div class="current-job-header">
+                    <div class="current-job-info">
+                        <span class="current-job-badge ${job.status}">${getStatusBadge(job.status)}</span>
+                        <span class="current-job-id"><strong>Bill #${job.id}</strong></span>
+                    </div>
+                    <div class="current-job-amount"><strong>${formatCurrency(job.total_amount)}</strong></div>
+                </div>
+                <div class="current-job-body">
+                    <div class="current-job-detail">
+                        <i class="fa-solid fa-car"></i>
+                        <span>${job.make || ''} ${job.model || ''} — ${job.registration_number || 'N/A'}</span>
+                    </div>
+                    <div class="current-job-detail">
+                        <i class="fa-solid fa-user"></i>
+                        <span>${job.owner_name || 'N/A'} ${job.owner_phone ? '· ' + job.owner_phone : ''}</span>
+                    </div>
+                    <div class="current-job-detail">
+                        <i class="fa-solid fa-calendar"></i>
+                        <span>Checked in: ${formatDate(job.check_in_date)}</span>
+                    </div>
+                    <div class="current-job-detail">
+                        <i class="fa-solid fa-list-ol"></i>
+                        <span>${itemsCount} item${itemsCount !== 1 ? 's' : ''}</span>
+                    </div>
+                    ${job.estimated_delivery ? `
+                    <div class="current-job-detail">
+                        <i class="fa-solid fa-truck-fast"></i>
+                        <span>Est. Delivery: ${formatDate(job.estimated_delivery)}</span>
+                    </div>` : ''}
+                </div>
+                <div class="current-job-actions">
+                    <button class="btn btn-sm btn-outline" onclick="viewBill(${job.id})">
+                        <i class="fa-solid fa-eye"></i> View Details
+                    </button>
+                    ${canStartWork ? `
+                    <button class="btn btn-sm btn-success" onclick="startJob(${job.id})">
+                        <i class="fa-solid fa-play"></i> Start Work
+                    </button>` : ''}
+                    ${canMarkDone ? `
+                    <button class="btn btn-sm btn-accent" onclick="openJobDoneModal(${job.id}, '${(job.owner_name || 'Customer').replace(/'/g, "\\'")}', '${(job.registration_number || '').replace(/'/g, "\\'")}', '${((job.make || '') + ' ' + (job.model || '')).replace(/'/g, "\\'")}', ${job.total_amount || 0})">
+                        <i class="fa-solid fa-circle-check"></i> Job Done
+                    </button>` : ''}
+                    <button class="btn btn-sm btn-primary" onclick="navigateTo('jobs')">
+                        <i class="fa-solid fa-briefcase"></i> All Jobs
+                    </button>
+                </div>
+            </div>
+        `;
+    } catch (err) {
+        section.style.display = 'none';
     }
 }
 

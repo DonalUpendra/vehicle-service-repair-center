@@ -205,6 +205,9 @@ if ($resource === 'jobs') {
     if ($id === 'stats' && $method === 'GET') {
         BillController::jobsStats();
     }
+    if ($id === 'current' && $method === 'GET') {
+        BillController::currentJob();
+    }
     jsonError('Not found', 404);
 }
 
@@ -294,6 +297,9 @@ if ($resource === 'customers') {
 
 // Salary Payments
 if ($resource === 'salaries') {
+    if ($method === 'GET' && $id === 'earnings') {
+        SalaryController::allTechnicianEarnings();
+    }
     if ($method === 'GET' && !$id) {
         SalaryController::index();
     }

@@ -6,6 +6,11 @@ async function handleLogin(e) {
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
 
+    const submitBtn = document.querySelector('#loginForm button[type="submit"]');
+    const originalHTML = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<span class="spinner spinner-white"></span> Signing in...';
+    submitBtn.disabled = true;
+
     try {
         const data = await apiPost('login', { email, password });
         currentUser = data.user;
@@ -17,6 +22,8 @@ async function handleLogin(e) {
         subscribeToPush();
         showToast(`Welcome back, ${data.user.name}!`, 'success');
     } catch (err) {
+        submitBtn.innerHTML = originalHTML;
+        submitBtn.disabled = false;
         document.getElementById('loginError').style.display = 'flex';
     }
 }

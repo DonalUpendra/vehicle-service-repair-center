@@ -121,6 +121,10 @@
                 <div class="cards-row" id="dashboardCards">
                     <div class="loading-state"><span class="spinner spinner-lg"></span><p style="margin-top:12px;">Loading dashboard...</p></div>
                 </div>
+                <div id="currentJobSection" class="panel" style="display:none;">
+                    <div class="panel-header"><h3><i class="fa-solid fa-briefcase"></i> Current Job</h3></div>
+                    <div class="panel-body" id="currentJobContainer"></div>
+                </div>
                 <div class="panel">
                     <div class="panel-header"><h3><i class="fa-solid fa-clock-rotate-left"></i> Recent Check-Ins</h3></div>
                     <div class="panel-body" id="recentCheckinsTable">
@@ -285,14 +289,19 @@
                     <div class="panel-body">
                         <form id="salaryForm" onsubmit="handleSalaryPayment(event)">
                             <div class="form-row">
-                                <div class="form-group"><label>Technician *</label><select id="salaryTechnician" required><option value="">-- Select --</option></select></div>
+                                <div class="form-group"><label>Technician *</label><select id="salaryTechnician" required onchange="onTechnicianSelect()"><option value="">-- Select --</option></select></div>
                                 <div class="form-group"><label>Amount (LKR) *</label><input type="number" id="salaryAmount" step="0.01" required></div>
                                 <div class="form-group"><label>Payment Date</label><input type="date" id="salaryDate"></div>
                             </div>
+                            <div id="commissionInfo" style="display:none;"></div>
                             <div class="form-group"><label>Notes</label><textarea id="salaryNotes" placeholder="Optional notes about this payment..." rows="2"></textarea></div>
                             <button type="submit" class="btn btn-accent"><i class="fa-solid fa-paper-plane"></i> Record Payment</button>
                         </form>
                     </div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><h3><i class="fa-solid fa-percent"></i> Technician Commissions</h3></div>
+                    <div class="panel-body" id="commissionEarningsTable"><div class="loading-state"><span class="spinner"></span><p>Loading commission data...</p></div></div>
                 </div>
                 <div class="panel">
                     <div class="panel-header"><h3><i class="fa-solid fa-list"></i> Payment History</h3></div>
@@ -410,6 +419,39 @@
                     <div class="modal-footer" style="border:none;padding:0;margin-top:16px;">
                         <button type="button" class="btn btn-outline btn-sm" onclick="closeTechnicianModal()">Cancel</button>
                         <button type="submit" class="btn btn-accent btn-sm"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vehicle Edit Modal -->
+    <div class="modal-overlay" id="vehicleEditModalOverlay">
+        <div class="modal" style="max-width:600px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-car-side"></i> Edit Vehicle</h3>
+                <button class="modal-close" onclick="closeVehicleEditModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="vehicleEditForm" onsubmit="saveVehicleEdit(event)">
+                    <input type="hidden" id="vEditId">
+                    <div class="form-group"><label>Registration Number *</label><input type="text" id="vEditRegNumber" required style="text-transform:uppercase;"></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Make / Brand</label><select id="vEditMake" onchange="onEditMakeChange()"><option value="">-- Select Make --</option></select></div>
+                        <div class="form-group"><label>Model</label><input type="text" id="vEditModel" list="editModelSuggestions" placeholder="Type to search or select..." autocomplete="off"><datalist id="editModelSuggestions"></datalist></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Owner Name *</label><input type="text" id="vEditOwnerName" required></div>
+                        <div class="form-group"><label>Email *</label><input type="email" id="vEditOwnerEmail" required></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Phone</label><input type="tel" id="vEditOwnerPhone"></div>
+                        <div class="form-group"><label>Odometer</label><input type="number" id="vEditOdometer"></div>
+                    </div>
+                    <div class="form-group"><label>Issues</label><textarea id="vEditIssues" placeholder="Reported issues..."></textarea></div>
+                    <div class="modal-footer" style="border:none;padding:0;margin-top:16px;">
+                        <button type="button" class="btn btn-outline btn-sm" onclick="closeVehicleEditModal()">Cancel</button>
+                        <button type="submit" class="btn btn-accent btn-sm"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
                     </div>
                 </form>
             </div>

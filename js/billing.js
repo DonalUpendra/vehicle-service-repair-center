@@ -84,6 +84,7 @@ async function viewVehicleHistory(vehicleId) {
 }
 
 async function createBillForVehicle(vehicleId) {
+    document.getElementById('searchResults').innerHTML = '<div class="loading-state"><span class="spinner"></span><p>Loading vehicle data...</p></div>';
     try {
         editingBillVehicleId = vehicleId;
         const vehicle = await apiGet('vehicles/' + vehicleId);
@@ -92,6 +93,7 @@ async function createBillForVehicle(vehicleId) {
 
         if (!visit) {
             showToast('No visit found for this vehicle. Please check in the vehicle first.', 'error');
+            renderSearchBill();
             return;
         }
 
@@ -99,6 +101,7 @@ async function createBillForVehicle(vehicleId) {
         openBillModal(visitDetail);
     } catch (err) {
         showToast('Error: ' + (err.message || 'Failed to create bill'), 'error');
+        renderSearchBill();
     }
 }
 

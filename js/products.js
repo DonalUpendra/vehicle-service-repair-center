@@ -117,6 +117,11 @@ async function saveProduct(e) {
         description: document.getElementById('prodDesc').value.trim(),
     };
 
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalHTML = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<span class="spinner spinner-white"></span> Saving...';
+    submitBtn.disabled = true;
+
     try {
         if (editId) {
             await apiPut('products/' + editId, productData);
@@ -128,6 +133,8 @@ async function saveProduct(e) {
         showToast(editId ? 'Product updated!' : 'Product added!', 'success');
     } catch (err) {
         showToast('Error: ' + (err.message || 'Failed to save product'), 'error');
+        submitBtn.innerHTML = originalHTML;
+        submitBtn.disabled = false;
     }
 }
 
@@ -137,11 +144,13 @@ function editProduct(id) {
 
 async function deleteProduct(id) {
     if (!confirm('Are you sure you want to delete this product?')) return;
+    showLoading('productsTable', 'Deleting...');
     try {
         await apiDelete('products/' + id);
         renderProducts();
         showToast('Product deleted.', 'info');
     } catch (err) {
         showToast('Error: ' + (err.message || 'Failed to delete product'), 'error');
+        renderProducts();
     }
 }

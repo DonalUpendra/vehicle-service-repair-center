@@ -91,6 +91,11 @@ async function renderReports() {
 }
 
 async function updateBillStatus(billId, newStatus) {
+    const btn = document.querySelector(`button[onclick*="updateBillStatus(${billId}, '${newStatus}')"]`);
+    if (btn) {
+        btn.innerHTML = '<span class="spinner spinner-white"></span> Processing...';
+        btn.disabled = true;
+    }
     try {
         await apiPut('bills/' + billId + '/status', { status: newStatus });
 
@@ -106,24 +111,46 @@ async function updateBillStatus(billId, newStatus) {
         renderDashboard();
     } catch (err) {
         showToast('Error: ' + (err.message || 'Failed to update status'), 'error');
+        if (btn) {
+            btn.disabled = false;
+            renderReports();
+        }
     }
 }
 
 async function simulateResendEmail(billId) {
+    const btn = document.querySelector(`button[onclick*="simulateResendEmail(${billId})"]`);
+    if (btn) {
+        btn.innerHTML = '<span class="spinner spinner-white"></span> Resending...';
+        btn.disabled = true;
+    }
     try {
         await apiPost('bills/' + billId + '/resend');
         showToast(`Approval email resent for Bill #${billId}.`, 'info');
         renderReports();
     } catch (err) {
         showToast('Error: ' + (err.message || 'Failed to resend email'), 'error');
+        if (btn) {
+            btn.disabled = false;
+            renderReports();
+        }
     }
 }
 
 async function adminApproveBill(billId) {
+    const btn = document.querySelector(`button[onclick*="adminApproveBill(${billId})"]`);
+    if (btn) {
+        btn.innerHTML = '<span class="spinner spinner-white"></span> Approving...';
+        btn.disabled = true;
+    }
     try {
         await updateBillStatus(billId, 'pending_approval');
         if (typeof renderJobs === 'function') renderJobs();
     } catch (err) {
         showToast('Error: ' + (err.message || 'Failed to approve bill'), 'error');
+        if (btn) {
+            btn.disabled = false;
+            renderReports();
+        }
     }
 }

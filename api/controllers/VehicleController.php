@@ -84,7 +84,7 @@ class VehicleController {
         requireAdmin();
         $data = getJsonInput();
 
-        $regNumber = trim($data['registration_number'] ?? $data['registrationNumber'] ?? '');
+        $regNumber = strtoupper(trim($data['registration_number'] ?? $data['registrationNumber'] ?? ''));
         $make = trim($data['make'] ?? '');
         $model = trim($data['model'] ?? '');
         $ownerName = trim($data['owner_name'] ?? $data['ownerName'] ?? '');
@@ -219,7 +219,7 @@ class VehicleController {
         foreach ($allowed as $field) {
             if (isset($data[$field])) {
                 $fields[] = "$field = ?";
-                $params[] = $field === 'odometer' ? (int)$data[$field] : trim($data[$field]);
+                $params[] = $field === 'odometer' ? (int)$data[$field] : ($field === 'registration_number' ? strtoupper(trim($data[$field])) : trim($data[$field]));
             }
         }
 

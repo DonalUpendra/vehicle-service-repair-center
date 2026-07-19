@@ -627,6 +627,60 @@ class BillController {
         }
     }
 
+    public static function currentJob() {
+        requireTechnician();
+        $db = Database::getInstance()->getConnection();
+        $userId = getCurrentUserId();
+
+        $stmt = $db->prepare(
+            'SELECT b.id, b.status, b.admin_note, b.total_amount, b.estimated_delivery, b.created_at,
+                    b.technician_id, b.visit_id,
+                    u.commission_percentage,
+                    v.registration_number, v.make, v.model, v.owner_name, v.owner_email, v.owner_phone,
+                    vi.check_in_date, vi.status as visit_status, u.name as technician_name
+             FROM bills b
+             JOIN visits vi ON b.visit_id = vi.id
+             JOIN vehicles v ON vi.vehicle_id = v.id
+             JOIN users u ON b.technician_id = u.id
+             WHERE b.technician_id = ? AND b.status IN (\'approved\', \'in_progress\')
+             ORDER BY FIELD(b.status, \'in_progress\', \'approved\'), b.created_at DESC
+             LIMIT 1'
+        );
+        $stmt->execute([$userId]);
+        $job = $stmt->fetch();
+
+        if (!$job) {
+            jsonResponse(null);
+            return;
+        }
+
+        $job['id'] = (int)$job['id'];
+        $job['technician_id'] = (int)$job['technician_id'];
+        $job['visit_id'] = (int)$job['visit_id'];
+        $job['total_amount'] = (float)$job['total_amount'];
+        $job['commission_percentage'] = (float)$job['commission_percentage'];
+        $job['commission_amount'] = round($job['total_amount'] * $job['commission_percentage'] / 100, 2);
+
+        $stmt = $db->prepare('SELECT * FROM bill_items WHERE bill_id = ?');
+        $stmt->execute([$job['id']]);
+        $items = $stmt->fetchAll();
+
+        foreach ($items as &$item) {
+            $item['id'] = (int)$item['id'];
+            $item['bill_id'] = (int)$item['bill_id'];
+            $item['product_id'] = (int)$item['product_id'];
+            $item['quantity'] = (int)$item['quantity'];
+            $item['unit_price'] = (float)$item['unit_price'];
+            $item['buy_price'] = (float)$item['buy_price'];
+            $item['line_total'] = (float)$item['line_total'];
+            $item['line_cost'] = (float)$item['line_cost'];
+        }
+
+        $job['items'] = $items;
+
+        jsonResponse($job);
+    }
+
     public static function jobsList() {
         requireTechnician();
         $db = Database::getInstance()->getConnection();

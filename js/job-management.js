@@ -303,6 +303,8 @@ function getJobActions(job, isAdmin, isOwnJob) {
 }
 
 async function editDraftBill(billId) {
+    const contentEl = document.getElementById('jobsContent');
+    if (contentEl) contentEl.innerHTML = '<div class="loading-state"><span class="spinner"></span><p>Loading draft...</p></div>';
     try {
         const bill = await apiGet('bills/' + billId);
         const visit = await apiGet('visits/' + bill.visit_id);
@@ -310,11 +312,17 @@ async function editDraftBill(billId) {
         openBillModal(visit, bill.items || []);
     } catch (err) {
         showToast('Error: ' + (err.message || 'Failed to open draft'), 'error');
+        if (typeof renderJobs === 'function') renderJobs();
     }
 }
 
 async function submitDraftBill(billId) {
     if (!confirm('Submit this draft quotation for admin review?')) return;
+    const btn = document.querySelector(`button[onclick*="submitDraftBill(${billId})"]`);
+    if (btn) {
+        btn.innerHTML = '<span class="spinner spinner-white"></span> Submitting...';
+        btn.disabled = true;
+    }
     try {
         await apiPut('bills/' + billId + '/status', { status: 'pending_admin_approval' });
         showToast('Quotation submitted for admin review!', 'success');
@@ -323,10 +331,16 @@ async function submitDraftBill(billId) {
         if (typeof renderDashboard === 'function') renderDashboard();
     } catch (err) {
         showToast('Error: ' + (err.message || 'Failed to submit'), 'error');
+        if (btn) { btn.disabled = false; renderJobs(); }
     }
 }
 
 async function startJob(billId) {
+    const btn = document.querySelector(`button[onclick*="startJob(${billId})"]`);
+    if (btn) {
+        btn.innerHTML = '<span class="spinner spinner-white"></span> Starting...';
+        btn.disabled = true;
+    }
     try {
         await apiPut('bills/' + billId + '/status', { status: 'in_progress' });
         showToast('Work started!', 'success');
@@ -335,10 +349,16 @@ async function startJob(billId) {
         if (typeof renderDashboard === 'function') renderDashboard();
     } catch (err) {
         showToast('Error: ' + (err.message || 'Failed to start job'), 'error');
+        if (btn) { btn.disabled = false; renderJobs(); }
     }
 }
 
 async function adminApproveBill(billId) {
+    const btn = document.querySelector(`button[onclick*="adminApproveBill(${billId})"]`);
+    if (btn) {
+        btn.innerHTML = '<span class="spinner spinner-white"></span> Approving...';
+        btn.disabled = true;
+    }
     try {
         await apiPut('bills/' + billId + '/status', { status: 'pending_approval' });
         showToast('Bill approved and sent to customer!', 'success');
@@ -347,10 +367,16 @@ async function adminApproveBill(billId) {
         if (typeof renderDashboard === 'function') renderDashboard();
     } catch (err) {
         showToast('Error: ' + (err.message || 'Failed to approve'), 'error');
+        if (btn) { btn.disabled = false; renderJobs(); }
     }
 }
 
 async function updateBillStatus(billId, status) {
+    const btn = document.querySelector(`button[onclick*="updateBillStatus(${billId}, '${status}')"]`);
+    if (btn) {
+        btn.innerHTML = '<span class="spinner spinner-white"></span> Processing...';
+        btn.disabled = true;
+    }
     try {
         await apiPut('bills/' + billId + '/status', { status: status });
         showToast('Status updated to: ' + getStatusLabel(status), 'success');
@@ -359,6 +385,7 @@ async function updateBillStatus(billId, status) {
         if (typeof renderDashboard === 'function') renderDashboard();
     } catch (err) {
         showToast('Error: ' + (err.message || 'Failed to update status'), 'error');
+        if (btn) { btn.disabled = false; renderJobs(); }
     }
 }
 
@@ -427,6 +454,11 @@ async function submitReject(billId) {
 
 async function resubmitBill(billId) {
     if (!confirm('Edit and re-submit this quotation for admin approval?')) return;
+    const btn = document.querySelector(`button[onclick*="resubmitBill(${billId})"]`);
+    if (btn) {
+        btn.innerHTML = '<span class="spinner spinner-white"></span> Loading...';
+        btn.disabled = true;
+    }
     try {
         await apiPut('bills/' + billId + '/status', { status: 'draft' });
         const bill = await apiGet('bills/' + billId);
@@ -436,11 +468,17 @@ async function resubmitBill(billId) {
         showToast('Quotation opened for editing. Update items and re-submit.', 'info');
     } catch (err) {
         showToast('Error: ' + (err.message || 'Failed to open for editing'), 'error');
+        if (btn) { btn.disabled = false; renderJobs(); }
     }
 }
 
 async function markJobCompleted(billId) {
     if (!confirm('Mark this job as completed? The customer has picked up the vehicle.')) return;
+    const btn = document.querySelector(`button[onclick*="markJobCompleted(${billId})"]`);
+    if (btn) {
+        btn.innerHTML = '<span class="spinner spinner-white"></span> Completing...';
+        btn.disabled = true;
+    }
     try {
         await apiPut('bills/' + billId + '/status', { status: 'completed' });
         showToast('Job marked as completed!', 'success');
@@ -449,22 +487,34 @@ async function markJobCompleted(billId) {
         if (typeof renderDashboard === 'function') renderDashboard();
     } catch (err) {
         showToast('Error: ' + (err.message || 'Failed to mark completed'), 'error');
+        if (btn) { btn.disabled = false; renderJobs(); }
     }
 }
 
 async function resendApproval(billId) {
     if (!confirm('Resend the approval email to the customer?')) return;
+    const btn = document.querySelector(`button[onclick*="resendApproval(${billId})"]`);
+    if (btn) {
+        btn.innerHTML = '<span class="spinner spinner-white"></span> Resending...';
+        btn.disabled = true;
+    }
     try {
         await apiPost('bills/' + billId + '/resend');
         showToast('Approval email resent to customer!', 'success');
         renderJobs();
     } catch (err) {
         showToast('Error: ' + (err.message || 'Failed to resend approval'), 'error');
+        if (btn) { btn.disabled = false; renderJobs(); }
     }
 }
 
 async function cancelPendingApproval(billId) {
     if (!confirm('Cancel this quotation? The customer will not be able to approve it.')) return;
+    const btn = document.querySelector(`button[onclick*="cancelPendingApproval(${billId})"]`);
+    if (btn) {
+        btn.innerHTML = '<span class="spinner spinner-white"></span> Cancelling...';
+        btn.disabled = true;
+    }
     try {
         await apiPut('bills/' + billId + '/status', { status: 'cancelled' });
         showToast('Quotation cancelled.', 'success');
@@ -473,11 +523,17 @@ async function cancelPendingApproval(billId) {
         if (typeof renderDashboard === 'function') renderDashboard();
     } catch (err) {
         showToast('Error: ' + (err.message || 'Failed to cancel'), 'error');
+        if (btn) { btn.disabled = false; renderJobs(); }
     }
 }
 
 async function reopenJob(billId) {
     if (!confirm('Reopen this job? It will be moved back to In Progress for additional work.')) return;
+    const btn = document.querySelector(`button[onclick*="reopenJob(${billId})"]`);
+    if (btn) {
+        btn.innerHTML = '<span class="spinner spinner-white"></span> Reopening...';
+        btn.disabled = true;
+    }
     try {
         await apiPut('bills/' + billId + '/status', { status: 'in_progress' });
         showToast('Job reopened for additional work.', 'success');
@@ -486,11 +542,17 @@ async function reopenJob(billId) {
         if (typeof renderDashboard === 'function') renderDashboard();
     } catch (err) {
         showToast('Error: ' + (err.message || 'Failed to reopen job'), 'error');
+        if (btn) { btn.disabled = false; renderJobs(); }
     }
 }
 
 async function approveDelivery(billId) {
     if (!confirm('Approve this job for delivery? The customer will be notified by email.')) return;
+    const btn = document.querySelector(`button[onclick*="approveDelivery(${billId})"]`);
+    if (btn) {
+        btn.innerHTML = '<span class="spinner spinner-white"></span> Approving...';
+        btn.disabled = true;
+    }
     try {
         await apiPut('bills/' + billId + '/status', { status: 'ready_for_delivery' });
         showToast('Delivery approved! Customer has been notified by email.', 'success');
@@ -499,11 +561,17 @@ async function approveDelivery(billId) {
         if (typeof renderDashboard === 'function') renderDashboard();
     } catch (err) {
         showToast('Error: ' + (err.message || 'Failed to approve delivery'), 'error');
+        if (btn) { btn.disabled = false; renderJobs(); }
     }
 }
 
 async function rejectDelivery(billId) {
     if (!confirm('Return this job to the technician for additional work?')) return;
+    const btn = document.querySelector(`button[onclick*="rejectDelivery(${billId})"]`);
+    if (btn) {
+        btn.innerHTML = '<span class="spinner spinner-white"></span> Returning...';
+        btn.disabled = true;
+    }
     try {
         await apiPut('bills/' + billId + '/status', { status: 'in_progress' });
         showToast('Job returned to technician for rework.', 'success');
@@ -512,6 +580,7 @@ async function rejectDelivery(billId) {
         if (typeof renderDashboard === 'function') renderDashboard();
     } catch (err) {
         showToast('Error: ' + (err.message || 'Failed to return job'), 'error');
+        if (btn) { btn.disabled = false; renderJobs(); }
     }
 }
 

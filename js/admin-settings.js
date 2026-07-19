@@ -1,5 +1,14 @@
 /* ==================== ADMIN SETTINGS ==================== */
 async function renderSettings() {
+    const smtpPanel = document.querySelector('#page-settings .panel:first-child');
+    let overlay = null;
+    if (smtpPanel) {
+        smtpPanel.style.position = 'relative';
+        overlay = document.createElement('div');
+        overlay.className = 'loading-overlay';
+        overlay.innerHTML = '<div class="loading-state"><span class="spinner"></span><p>Loading settings...</p></div>';
+        smtpPanel.appendChild(overlay);
+    }
     try {
         const settings = await apiGet('settings');
         const map = {};
@@ -17,6 +26,9 @@ async function renderSettings() {
         renderMakes();
     } catch (err) {
         showToast('Failed to load settings: ' + (err.message || 'Unknown error'), 'error');
+    } finally {
+        if (overlay) overlay.remove();
+        if (smtpPanel) smtpPanel.style.position = '';
     }
 }
 
@@ -50,6 +62,7 @@ async function saveSettings() {
 
 /* ==================== VEHICLE MAKES / BRANDS ==================== */
 async function renderMakes() {
+    showLoading('makesList', 'Loading...');
     try {
         const makes = await apiGet('makes');
         const list = document.getElementById('makesList');
@@ -86,6 +99,12 @@ async function addMake() {
         showToast('Please enter a make name', 'error');
         return;
     }
+    const addBtn = document.querySelector('#page-settings button[onclick*="addMake"]');
+    const originalHTML = addBtn ? addBtn.innerHTML : '';
+    if (addBtn) {
+        addBtn.innerHTML = '<span class="spinner spinner-white"></span> Adding...';
+        addBtn.disabled = true;
+    }
     try {
         await apiPost('makes', { name });
         input.value = '';
@@ -93,17 +112,20 @@ async function addMake() {
         renderMakes();
     } catch (err) {
         showToast('Failed to add make: ' + (err.message || 'Unknown error'), 'error');
+        if (addBtn) { addBtn.innerHTML = originalHTML; addBtn.disabled = false; }
     }
 }
 
 async function deleteMake(id) {
     if (!confirm('Are you sure you want to delete this make? All associated models will also be deleted.')) return;
+    showLoading('makesList', 'Deleting...');
     try {
         await apiDelete('makes/' + id);
         showToast('Make deleted successfully!', 'success');
         renderMakes();
     } catch (err) {
         showToast('Failed to delete make: ' + (err.message || 'Unknown error'), 'error');
+        renderMakes();
     }
 }
 
@@ -118,6 +140,7 @@ async function renderModels() {
         list.innerHTML = '<p style="color:var(--text-muted);">Select a make above to view its models.</p>';
         return;
     }
+    showLoading('modelsList', 'Loading...');
     try {
         const models = await apiGet('models?make_id=' + makeId);
         if (models.length === 0) {
@@ -150,6 +173,12 @@ async function addModel() {
         showToast('Please enter a model name', 'error');
         return;
     }
+    const addBtn = document.querySelector('#page-settings button[onclick*="addModel"]');
+    const originalHTML = addBtn ? addBtn.innerHTML : '';
+    if (addBtn) {
+        addBtn.innerHTML = '<span class="spinner spinner-white"></span> Adding...';
+        addBtn.disabled = true;
+    }
     try {
         await apiPost('models', { make_id: parseInt(makeId), name });
         input.value = '';
@@ -157,17 +186,20 @@ async function addModel() {
         renderModels();
     } catch (err) {
         showToast('Failed to add model: ' + (err.message || 'Unknown error'), 'error');
+        if (addBtn) { addBtn.innerHTML = originalHTML; addBtn.disabled = false; }
     }
 }
 
 async function deleteModel(id) {
     if (!confirm('Are you sure you want to delete this model?')) return;
+    showLoading('modelsList', 'Deleting...');
     try {
         await apiDelete('models/' + id);
         showToast('Model deleted successfully!', 'success');
         renderModels();
     } catch (err) {
         showToast('Failed to delete model: ' + (err.message || 'Unknown error'), 'error');
+        renderModels();
     }
 }
 
@@ -176,10 +208,22 @@ async function testEmailConfig() {
     const email = prompt('Enter a test email address to send a test email to:');
     if (!email) return;
 
+    const testBtn = document.querySelector('#page-settings button[onclick*="testEmailConfig"]');
+    const originalHTML = testBtn ? testBtn.innerHTML : '';
+    if (testBtn) {
+        testBtn.innerHTML = '<span class="spinner spinner-white"></span> Sending...';
+        testBtn.disabled = true;
+    }
+
     try {
         const result = await apiPost('settings/test-email', { email: email.trim() });
         showToast(result.message, result.success ? 'success' : 'error');
     } catch (err) {
         showToast('Test email failed: ' + (err.message || 'Unknown error'), 'error');
+    } finally {
+        if (testBtn) {
+            testBtn.innerHTML = originalHTML;
+            testBtn.disabled = false;
+        }
     }
 }

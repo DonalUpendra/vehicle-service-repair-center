@@ -67,7 +67,13 @@ async function renderVehicleIntake() {
                         <td>${v.owner_phone || '-'}</td>
                         <td>${formatDate(v.last_visit_date)}</td>
                         <td>${v.last_visit_status ? getStatusBadge(v.last_visit_status) : '<span class="badge badge-pending"><i class="fa-solid fa-circle"></i> New</span>'}</td>
-                        <td><button class="btn btn-sm btn-outline" onclick="selectVehicleFromReg('${regSafe}')"><i class="fa-solid fa-pen-to-square"></i> Manage</button></td>
+                        <td>
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline" onclick="selectVehicleFromReg('${regSafe}')"><i class="fa-solid fa-pen-to-square"></i> Manage</button>
+                                <button class="btn btn-sm btn-outline" onclick="editVehicle(${v.id})"><i class="fa-solid fa-pencil"></i> Edit</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteVehicle(${v.id})"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </td>
                     </tr>`;
             });
         }
@@ -199,12 +205,16 @@ function onRegNumberFocus() {
 
 async function selectVehicle(vehicleId) {
     hideSuggestions();
+    const panel = document.getElementById('vehicleHistoryPanel');
+    document.getElementById('vehicleHistory').innerHTML = '<div class="loading-state"><span class="spinner"></span><p>Loading vehicle details...</p></div>';
+    panel.style.display = 'block';
     try {
         const detail = await apiGet('vehicles/' + vehicleId);
         setIntakeForm(detail);
         renderVehicleHistory(detail);
     } catch (err) {
         showToast('Failed to load vehicle details', 'error');
+        document.getElementById('vehicleHistory').innerHTML = '<p style="color:var(--text-muted);">Failed to load vehicle details.</p>';
     }
 }
 
@@ -243,6 +253,112 @@ function renderVehicleHistory(vehicle) {
     panel.style.display = 'block';
 }
 
+async function openVehicleEditModal(vehicle) {
+    openModal('vehicleEditModalOverlay');
+    document.getElementById('vEditId').value = vehicle.id;
+    document.getElementById('vEditRegNumber').value = vehicle.registration_number || '';
+    document.getElementById('vEditOwnerName').value = vehicle.owner_name || '';
+    document.getElementById('vEditOwnerEmail').value = vehicle.owner_email || '';
+    document.getElementById('vEditOwnerPhone').value = vehicle.owner_phone || '';
+    document.getElementById('vEditOdometer').value = vehicle.odometer || '';
+    document.getElementById('vEditIssues').value = vehicle.issues || '';
+
+    const makeSelect = document.getElementById('vEditMake');
+    try {
+        const makes = await apiGet('makes');
+        makeSelect.innerHTML = '<option value="">-- Select Make --</option>';
+        makes.forEach(m => {
+            makeSelect.innerHTML += `<option value="${escapeHtml(m.name)}" ${m.name === vehicle.make ? 'selected' : ''}>${escapeHtml(m.name)}</option>`;
+        });
+    } catch (e) {
+        makeSelect.innerHTML = '<option value="">-- Select Make --</option>';
+    }
+
+    if (vehicle.make) {
+        await onEditMakeChange();
+        document.getElementById('vEditModel').value = vehicle.model || '';
+    }
+}
+
+function closeVehicleEditModal() {
+    closeModal('vehicleEditModalOverlay');
+}
+
+async function onEditMakeChange() {
+    const makeName = document.getElementById('vEditMake').value;
+    const datalist = document.getElementById('editModelSuggestions');
+    datalist.innerHTML = '';
+    document.getElementById('vEditModel').value = '';
+    if (!makeName) return;
+    try {
+        const makes = await apiGet('makes');
+        const make = makes.find(m => m.name === makeName);
+        if (!make) return;
+        const models = await apiGet('models?make_id=' + make.id);
+        models.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.name;
+            datalist.appendChild(opt);
+        });
+    } catch (err) {
+        showToast('Failed to load models', 'error');
+    }
+}
+
+async function editVehicle(id) {
+    try {
+        const vehicle = await apiGet('vehicles/' + id);
+        await openVehicleEditModal(vehicle);
+    } catch (err) {
+        showToast('Failed to load vehicle details', 'error');
+    }
+}
+
+async function saveVehicleEdit(e) {
+    e.preventDefault();
+
+    const id = document.getElementById('vEditId').value;
+    const btn = e.target.querySelector('button[type="submit"]');
+    const originalHTML = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner spinner-white"></span> Saving...';
+    btn.disabled = true;
+
+    const payload = {
+        registration_number: document.getElementById('vEditRegNumber').value.trim().toUpperCase(),
+        make: document.getElementById('vEditMake').value.trim(),
+        model: document.getElementById('vEditModel').value.trim(),
+        owner_name: document.getElementById('vEditOwnerName').value.trim(),
+        owner_email: document.getElementById('vEditOwnerEmail').value.trim(),
+        owner_phone: document.getElementById('vEditOwnerPhone').value.trim(),
+        odometer: parseInt(document.getElementById('vEditOdometer').value) || 0,
+        issues: document.getElementById('vEditIssues').value.trim(),
+    };
+
+    try {
+        await apiPut('vehicles/' + id, payload);
+        closeVehicleEditModal();
+        renderVehicleIntake();
+        showToast('Vehicle updated successfully!', 'success');
+    } catch (err) {
+        showToast('Error: ' + (err.message || 'Failed to update vehicle'), 'error');
+    } finally {
+        btn.innerHTML = originalHTML;
+        btn.disabled = false;
+    }
+}
+
+async function deleteVehicle(id) {
+    if (!confirm('Are you sure you want to permanently delete this vehicle and all associated visits and bills? This action cannot be undone.')) return;
+    try {
+        await apiDelete('vehicles/' + id);
+        renderVehicleIntake();
+        renderDashboard();
+        showToast('Vehicle deleted.', 'info');
+    } catch (err) {
+        showToast('Error: ' + (err.message || 'Failed to delete vehicle'), 'error');
+    }
+}
+
 async function handleVehicleIntake(e) {
     e.preventDefault();
 
@@ -252,7 +368,7 @@ async function handleVehicleIntake(e) {
     btn.disabled = true;
 
     const payload = {
-        registration_number: document.getElementById('vRegNumber').value.trim(),
+        registration_number: document.getElementById('vRegNumber').value.trim().toUpperCase(),
         make: document.getElementById('vMake').value.trim(),
         model: document.getElementById('vModel').value.trim(),
         owner_name: document.getElementById('vOwnerName').value.trim(),

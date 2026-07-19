@@ -62,6 +62,11 @@ async function saveTechnician(e) {
         commission_percentage: parseFloat(document.getElementById('techCommission').value) || 0,
     };
 
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalHTML = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<span class="spinner spinner-white"></span> Saving...';
+    submitBtn.disabled = true;
+
     try {
         await apiPost('users', payload);
         closeTechnicianModal();
@@ -69,6 +74,8 @@ async function saveTechnician(e) {
         showToast('Technician added successfully!', 'success');
     } catch (err) {
         showToast('Error: ' + (err.message || 'Failed to add technician'), 'error');
+        submitBtn.innerHTML = originalHTML;
+        submitBtn.disabled = false;
     }
 }
 
@@ -80,32 +87,38 @@ async function editTechnicianCommission(id, currentCommission) {
         showToast('Please enter a valid percentage (0 or higher).', 'warning');
         return;
     }
+    showLoading('techniciansTable', 'Updating...');
     try {
         await apiPut('users/' + id, { commission_percentage: val });
         renderTechnicians();
         showToast('Commission updated to ' + val + '%.', 'success');
     } catch (err) {
         showToast('Error: ' + (err.message || 'Failed to update commission'), 'error');
+        renderTechnicians();
     }
 }
 
 async function toggleTechnician(id, currentlyActive) {
+    showLoading('techniciansTable', 'Updating...');
     try {
         await apiPut('users/' + id, { active: !currentlyActive });
         renderTechnicians();
         showToast(`Technician ${currentlyActive ? 'disabled' : 'enabled'}.`, 'info');
     } catch (err) {
         showToast('Error: ' + (err.message || 'Failed to toggle technician'), 'error');
+        renderTechnicians();
     }
 }
 
 async function deleteTechnician(id) {
     if (!confirm('Are you sure you want to delete this technician?')) return;
+    showLoading('techniciansTable', 'Deleting...');
     try {
         await apiDelete('users/' + id);
         renderTechnicians();
         showToast('Technician deleted.', 'info');
     } catch (err) {
         showToast('Error: ' + (err.message || 'Failed to delete technician'), 'error');
+        renderTechnicians();
     }
 }
