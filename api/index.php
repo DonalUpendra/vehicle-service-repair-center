@@ -182,6 +182,9 @@ if ($resource === 'bills') {
 
 // Reports
 if ($resource === 'reports') {
+    if ($id === 'full' && $method === 'GET') {
+        ReportController::full();
+    }
     if ($id === 'today' && $method === 'GET') {
         ReportController::today();
     }

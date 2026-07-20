@@ -233,13 +233,49 @@
                     <h1><i class="fa-solid fa-chart-line"></i> Reports</h1>
                     <span class="breadcrumb"><i class="fa-solid fa-house"></i> Home / Reports</span>
                 </div>
-                <div class="cards-row" id="reportCards">
+
+                <!-- Summary Cards -->
+                <div class="cards-row" id="reportSummaryCards">
                     <div class="loading-state"><span class="spinner spinner-lg"></span><p>Loading reports...</p></div>
                 </div>
-                <div class="panel">
-                    <div class="panel-header"><h3><i class="fa-solid fa-file-lines"></i> All Bills / Visits</h3></div>
-                    <div class="panel-body" id="allBillsTable">
-                        <div class="loading-state"><span class="spinner"></span><p>Loading bills...</p></div>
+
+                <!-- Report Tabs -->
+                <div class="report-tabs">
+                    <button class="report-tab active" onclick="switchReportTab('status')"><i class="fa-solid fa-list-check"></i> Status Breakdown</button>
+                    <button class="report-tab" onclick="switchReportTab('bills')"><i class="fa-solid fa-file-invoice"></i> All Bills</button>
+                    <button class="report-tab" onclick="switchReportTab('technicians')"><i class="fa-solid fa-user-gear"></i> Technician Performance</button>
+                </div>
+
+                <!-- Tab: Status Breakdown -->
+                <div class="report-tab-content active" id="reportTabStatus">
+                    <div class="panel">
+                        <div class="panel-header"><h3><i class="fa-solid fa-chart-pie"></i> Bills by Status</h3></div>
+                        <div class="panel-body" id="statusBreakdownTable">
+                            <div class="loading-state"><span class="spinner"></span><p>Loading status breakdown...</p></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: All Bills -->
+                <div class="report-tab-content" id="reportTabBills">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <h3><i class="fa-solid fa-file-lines"></i> All Bills with Full Details</h3>
+                            <span style="font-size:0.8rem;color:var(--text-muted)" id="billsCount"></span>
+                        </div>
+                        <div class="panel-body no-padding" id="detailedBillsTable">
+                            <div class="loading-state"><span class="spinner"></span><p>Loading bills...</p></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Technician Performance -->
+                <div class="report-tab-content" id="reportTabTechnicians">
+                    <div class="panel">
+                        <div class="panel-header"><h3><i class="fa-solid fa-ranking-star"></i> Technician Performance</h3></div>
+                        <div class="panel-body" id="technicianPerformanceTable">
+                            <div class="loading-state"><span class="spinner"></span><p>Loading technician data...</p></div>
+                        </div>
                     </div>
                 </div>
             </div>
